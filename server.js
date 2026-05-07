@@ -208,6 +208,28 @@ app.delete("/categorias/:id", async (req, res) => {
    PRODUCTOS
 ========================= */
 
+const productosPath = path.join(__dirname, "uploads", "productos");
+
+if (!fs.existsSync(productosPath)) {
+  fs.mkdirSync(productosPath, { recursive: true });
+}
+
+const storageProductos = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, productosPath);
+  },
+  filename: (req, file, cb) => {
+    const nombreArchivo =
+      Date.now() + "-" + file.originalname.replace(/\s+/g, "-");
+
+    cb(null, nombreArchivo);
+  },
+});
+
+const uploadProducto = multer({
+  storage: storageProductos,
+});
+
 app.get("/productos", async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -222,27 +244,144 @@ app.get("/productos", async (req, res) => {
 
     res.json(rows);
   } catch (error) {
+    console.error(error);
     res.status(500).json(error);
   }
 });
 
-app.post("/productos", async (req, res) => {
+app.get("/productos/:id", async (req, res) => {
   try {
-    const { nombre, precio, imagen, categoria_id } = req.body;
+    const { id } = req.params;
+
+    const [rows] = await db.query(`
+      SELECT 
+        productos.*,
+        categorias.nombre AS categoria
+      FROM productos
+      LEFT JOIN categorias
+      ON productos.categoria_id = categorias.id
+      WHERE productos.id = ?
+    `, [id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        message: "Producto no encontrado"
+      });
+    }
+
+    res.json(rows[0]);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(error);
+  }
+});
+
+app.post("/productos", uploadProducto.array("imagenes", 6), async (req, res) => {
+  try {
+    const {
+      nombre,
+      precio,
+      descripcion,
+      categoria_id,
+      marca,
+      stock,
+      sku,
+      tallas,
+      usa_tallas,
+      tipo_talla,
+      usa_colores,
+      colores,
+    } = req.body;
+
+    if (!nombre || !precio || !descripcion || !categoria_id || !stock) {
+      return res.status(400).json({
+        message: "Faltan campos obligatorios",
+      });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        message: "Debes subir mínimo una imagen",
+      });
+    }
+
+    const imagenPrincipal = `uploads/productos/${req.files[0].filename}`;
+
+    const imagenes = req.files.map(file => {
+      return `uploads/productos/${file.filename}`;
+    });
 
     const [result] = await db.query(
-      "INSERT INTO productos(nombre, precio, imagen, categoria_id) VALUES (?, ?, ?, ?)",
-      [nombre, precio, imagen, categoria_id]
+      `INSERT INTO productos 
+      (
+        nombre, precio, descripcion, imagen, imagenes,
+        categoria_id, marca, stock, sku, tallas,
+        usa_tallas, tipo_talla, usa_colores, colores
+      ) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        nombre,
+        precio,
+        descripcion,
+        imagenPrincipal,
+        JSON.stringify(imagenes),
+        categoria_id,
+        marca || "",
+        stock,
+        sku || "",
+        tallas || "[]",
+        usa_tallas || 0,
+        tipo_talla || "",
+        usa_colores || 0,
+        colores || "[]",
+      ]
     );
 
     res.json({
       id: result.insertId,
       nombre,
       precio,
-      imagen,
+      descripcion,
+      imagen: imagenPrincipal,
+      imagenes,
       categoria_id,
+      marca,
+      stock,
+      sku,
+      tallas,
+      usa_tallas,
+      tipo_talla,
+      usa_colores,
+      colores,
     });
   } catch (error) {
+    console.error(error);
+    res.status(500).json(error);
+  }
+});
+
+app.delete("/productos/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [producto] = await db.query(
+      "SELECT imagen, imagenes FROM productos WHERE id = ?",
+      [id]
+    );
+
+    if (producto.length === 0) {
+      return res.status(404).json({
+        message: "Producto no encontrado",
+      });
+    }
+
+    await db.query("DELETE FROM productos WHERE id = ?", [id]);
+
+    res.json({
+      message: "Producto eliminado correctamente",
+    });
+  } catch (error) {
+    console.error(error);
     res.status(500).json(error);
   }
 });

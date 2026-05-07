@@ -28,6 +28,8 @@
     <!--FLYERS-->
     <section>
       <h2 class="admin-h2">Flyers</h2>
+      <hr class="linea-pro">
+
 
       <button id="abrirModalFlyer" class="btn-crear-categoria">
         Agregar Flyer
@@ -55,10 +57,10 @@
       <div id="contenedorFlyers" class="categorias-admin"></div>
     </section>
 
-
     <!--CATEGORIAS-->
     <section>
       <h2 class="admin-h2">Categorías</h2>
+      <hr class="linea-pro">
 
 
       <button id="abrirModalCategoria" class="btn-crear-categoria">
@@ -96,51 +98,187 @@
     </section>
 
     <!--PRODUCTOS-->
-    <section>
+    <section class="admin-productos-section">
+
+      <h2 class="admin-h2">Productos</h2>
+      <hr class="linea-pro">
+      
+      
+
       <button id="abrirModalProducto" class="btn-crear-categoria">
-        Crear Producto
+        + Agregar Producto
       </button>
 
-      <div class="modal-categoria" id="modalProducto">
-        <div class="modal-contenido">
-          <span class="cerrar-modal" id="cerrarModalProducto">&times;</span>
+      <div class="modal-producto" id="modalProducto">
+        <div class="modal-producto-contenido">
 
-          <h2>Crear Producto</h2>
+          <span class="cerrar-modal-producto" id="cerrarModalProducto">&times;</span>
 
-          <form id="formProducto">
-            <input 
-              type="text" 
-              id="nombreProducto" 
-              placeholder="Nombre del producto" 
-              required
-            >
+          <div class="producto-header">
+            <p>Inicio › Mis Productos › <span>Agregar Nuevo Producto</span></p>
+            <h2>Agregar Nuevo Producto</h2>
+            <p>Completa la información para publicar tu producto en la tienda.</p>
+          </div>
 
-            <select id="categoriaProducto" required>
-              <option value="">Seleccionar categoría</option>
-            </select>
+          <form id="formProducto" class="producto-form">
 
-            <input 
-              type="number" 
-              id="precioProducto" 
-              placeholder="Precio del producto" 
-              required
-            >
+            <div class="producto-grid">
 
-            <input 
-              type="file" 
-              id="imagenProducto" 
-              accept="image/*" 
-              required
-            >
+              <div class="producto-card">
+                <h3>Información del producto</h3>
 
-            <button type="submit">Guardar Producto</button>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Título del producto *</label>
+                    <input type="text" id="nombreProducto" placeholder="Ej. Chaqueta Urban Gold" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Precio *</label>
+                    <input type="number" id="precioProducto" placeholder="0.00" required>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Descripción *</label>
+                  <textarea id="descripcionProducto" maxlength="1000" placeholder="Describe tu producto, materiales, características, beneficios, etc." required></textarea>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Categoría *</label>
+                    <select id="categoriaProducto" required>
+                      <option value="">Selecciona una categoría</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Marca</label>
+                    <input type="text" id="marcaProducto" placeholder="Ej. Rivera Shop">
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>¿Este producto usa tallas?</label>
+                  <div class="opciones-switch">
+                    <button type="button" class="opcion-btn activo" data-tallas="si">Sí</button>
+                    <button type="button" class="opcion-btn" data-tallas="no">No</button>
+                  </div>
+                </div>
+
+                <div class="form-group" id="bloqueTallasProducto">
+                  <label>Tipo de tallas</label>
+
+                  <div class="tipo-tallas-grid">
+                    <button type="button" data-tipo-talla="ropa-adulto">Ropa adulto</button>
+                    <button type="button" data-tipo-talla="ropa-nino">Ropa niño</button>
+                    <button type="button" data-tipo-talla="ropa-rango">Ropa por rango</button>
+                    <button type="button" data-tipo-talla="calzado-adulto">Calzado adulto</button>
+                    <button type="button" data-tipo-talla="calzado-nino">Calzado niño</button>
+                    <button type="button" data-tipo-talla="anillos">Anillos</button>
+                    <button type="button" data-tipo-talla="personalizada">Personalizada</button>
+                  </div>
+
+                  <div id="opcionesTallas" class="opciones-tallas"></div>
+
+                  <div class="tallas-editor" id="editorTallaPersonalizada" style="display: none;">
+                    <input type="text" id="inputTalla" placeholder="Ej. Única, S/M, 2T, 6M">
+                    <button type="button" id="agregarTalla">Agregar</button>
+                  </div>
+
+                  <div id="listaTallas" class="lista-tallas"></div>
+
+                  <small class="mini-text">
+                    Puedes agregar tallas de ropa, calzado o variantes como Única.
+                  </small>
+                </div>
+
+                <div class="form-group">
+                  <label>¿Este producto usa colores?</label>
+                  <div class="opciones-switch">
+                    <button type="button" class="opcion-btn activo" data-colores="si">Sí</button>
+                    <button type="button" class="opcion-btn" data-colores="no">No</button>
+                  </div>
+                </div>
+
+                <div class="form-group" id="bloqueColoresProducto">
+                  <label>Colores disponibles</label>
+
+                  <div class="colores-editor">
+                    <input type="text" id="inputColor" placeholder="Ej. Negro, Dorado, Beige, Rosado palo">
+                    <button type="button" id="agregarColor">Agregar</button>
+                  </div>
+
+                  <div id="listaColores" class="lista-tallas"></div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Stock disponible *</label>
+                    <input type="number" id="stockProducto" placeholder="Ej. 20" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label>SKU / Código del producto</label>
+                    <input type="text" id="skuProducto" placeholder="Ej. RIV-CHQ-001">
+                  </div>
+                </div>
+              </div>
+
+              <div class="producto-card">
+                <h3>Imágenes del producto <span>*</span></h3>
+                <p class="mini-text">Sube imágenes de alta calidad, mínimo 1 imagen.</p>
+
+                <label class="upload-area" for="imagenesProducto">
+                  <div class="upload-icon">☁</div>
+                  <h4>Haz clic para subir imágenes</h4>
+                  <p>o arrastra y suelta</p>
+                  <small>Formatos: JPG, PNG, WEBP. Máx. 5MB</small>
+                </label>
+
+                <input type="file" id="imagenesProducto" accept="image/*" multiple hidden required>
+
+                <div class="galeria-header">
+                  <h4>Galería de imágenes</h4>
+                  <span id="contadorImagenes">0/6 imágenes</span>
+                </div>
+
+                <div class="preview-galeria" id="previewGaleria">
+                  <div></div><div></div><div></div>
+                  <div></div><div></div><div></div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="producto-bottom">
+              <div class="consejo-box">
+                <div>💡</div>
+                <p>
+                  <strong>Consejos</strong><br>
+                  Usa imágenes nítidas, buena iluminación y muestra tu producto desde diferentes ángulos.
+                </p>
+              </div>
+
+              <div class="producto-actions">
+                <button type="button" class="btn-cancelar" id="cancelarProducto">
+                  Cancelar
+                </button>
+
+                <button type="submit" class="btn-guardar-producto">
+                  💾 Guardar Producto
+                </button>
+              </div>
+            </div>
+
           </form>
         </div>
       </div>
 
-    </section>
+      <div id="contenedorProductos" class="productos-admin"></div>
 
-<div id="contenedorProductosAdmin" class="categorias-admin"></div>
+    </section>
+    <div id="contenedorProductosAdmin" class="categorias-admin"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script src="scripts.js"></script>
