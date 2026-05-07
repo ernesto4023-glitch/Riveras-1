@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrador</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+</head>
+<body>
+    <style>
+        h1{
+            text-align: center;
+            margin: 40px;
+        }
+
+        .btn-crear-categoria{
+            display: flex;
+            justify-content: center;
+            margin: 0 auto;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+    <h1>Administrador</h1>
+
+    <!--FLYERS-->
+    <section>
+      <h2 class="admin-h2">Flyers</h2>
+
+      <button id="abrirModalFlyer" class="btn-crear-categoria">
+        Agregar Flyer
+      </button>
+
+      <div class="modal-categoria" id="modalFlyer">
+        <div class="modal-contenido">
+          <span class="cerrar-modal" id="cerrarModalFlyer">&times;</span>
+
+          <h2>Agregar Flyer</h2>
+
+          <form id="formFlyer">
+            <input 
+              type="file" 
+              id="imagenFlyer" 
+              accept="image/*" 
+              required
+            >
+
+            <button type="submit">Guardar Flyer</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="contenedorFlyers" class="categorias-admin"></div>
+    </section>
+
+
+    <!--CATEGORIAS-->
+    <section>
+      <h2 class="admin-h2">Categorías</h2>
+
+
+      <button id="abrirModalCategoria" class="btn-crear-categoria">
+        Crear Categoría
+      </button>
+
+      <div class="modal-categoria" id="modalCategoria">
+        <div class="modal-contenido">
+          <span class="cerrar-modal" id="cerrarModalCategoria">&times;</span>
+
+          <h2>Crear Categoría</h2>
+
+          <form id="formCategoria">
+            <input 
+              type="text" 
+              id="nombreCategoria" 
+              placeholder="Nombre de la categoría" 
+              required
+            >
+
+            <input 
+              type="file" 
+              id="imagenCategoria" 
+              accept="image/*" 
+              required
+            >
+
+            <button type="submit">Guardar Categoría</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="contenedorCategorias" class="categorias-admin"></div>
+
+    </section>
+
+    <!--PRODUCTOS-->
+    <section>
+      <button id="abrirModalProducto" class="btn-crear-categoria">
+        Crear Producto
+      </button>
+
+      <div class="modal-categoria" id="modalProducto">
+        <div class="modal-contenido">
+          <span class="cerrar-modal" id="cerrarModalProducto">&times;</span>
+
+          <h2>Crear Producto</h2>
+
+          <form id="formProducto">
+            <input 
+              type="text" 
+              id="nombreProducto" 
+              placeholder="Nombre del producto" 
+              required
+            >
+
+            <select id="categoriaProducto" required>
+              <option value="">Seleccionar categoría</option>
+            </select>
+
+            <input 
+              type="number" 
+              id="precioProducto" 
+              placeholder="Precio del producto" 
+              required
+            >
+
+            <input 
+              type="file" 
+              id="imagenProducto" 
+              accept="image/*" 
+              required
+            >
+
+            <button type="submit">Guardar Producto</button>
+          </form>
+        </div>
+      </div>
+
+    </section>
+
+<div id="contenedorProductosAdmin" class="categorias-admin"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script src="scripts.js"></script>
+</body>
+</html>
