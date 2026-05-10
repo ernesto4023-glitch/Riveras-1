@@ -1,4 +1,4 @@
-const API_URL = "localhost";
+const API_URL = "https://riverashop.net/";
 
 let monedaActual = localStorage.getItem("monedaActual") || "COP";
 let tasaCambio = Number(localStorage.getItem("tasaCambioCache")) || 4000;
