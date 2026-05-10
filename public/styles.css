@@ -83,6 +83,15 @@ body{
   display: block;
 }
 
+
+
+.logoFooter img {
+  width: 130px;
+  display: block;
+  margin: 0 auto;
+}
+
+
 .menu .navbar ul {
   display: flex;
   align-items: center;
@@ -728,6 +737,36 @@ td {
   background: #D4AF37;
   color: #050505;
   border-color: #D4AF37;
+}
+
+.metodos-pago {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.metodo-pago-btn {
+  background: #111;
+  color: #fff;
+  border: 1px solid rgba(212,175,55,.35);
+  border-radius: 10px;
+  padding: 13px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.metodo-pago-btn.activo {
+  background: #D4AF37;
+  color: #050505;
+}
+
+.info-metodo-pago {
+  background: #101010;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  padding: 15px;
+  color: #fff;
+  font-size: 14px;
 }
 
 

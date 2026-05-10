@@ -90,12 +90,19 @@
       <input type="text" id="checkoutDireccion" placeholder="Dirección" required>
       <input type="text" id="checkoutCiudad" placeholder="Ciudad" required>
 
-      <select id="checkoutMetodoPago" required>
-        <option value="">Selecciona método de pago</option>
-        <option value="Nequi">Nequi</option>
-        <option value="Bancolombia">Bancolombia</option>
-        <option value="Contra entrega">Contra entrega</option>
-      </select>
+      <div class="metodos-pago">
+      <button type="button" class="metodo-pago-btn" data-metodo-pago="Nequi">
+          Nequi
+      </button>
+
+      <button type="button" class="metodo-pago-btn" data-metodo-pago="Bancolombia">
+          Bancolombia
+      </button>
+
+      <button type="button" class="metodo-pago-btn" data-metodo-pago="Contra entrega">
+          Contra entrega
+      </button>
+      </div>
 
       <input type="file" id="checkoutComprobante" accept="image/*,.pdf">
 
@@ -105,7 +112,7 @@
     </form>
   </div>
 </div>
-<script src="scripts.js?v=12"></script>
+<script src="scripts.js?v=14"></script>
 
 </body>
 </html>

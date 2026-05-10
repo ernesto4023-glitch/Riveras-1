@@ -223,12 +223,25 @@
                 <input type="text" id="checkoutDireccion" placeholder="Dirección" required>
                 <input type="text" id="checkoutCiudad" placeholder="Ciudad" required>
 
-                <select id="checkoutMetodoPago" required>
-                    <option value="">Selecciona método de pago</option>
-                    <option value="Nequi">Nequi</option>
-                    <option value="Bancolombia">Bancolombia</option>
-                    <option value="Contra entrega">Contra entrega</option>
-                </select>
+                <input type="hidden" id="checkoutMetodoPago" required>
+
+                <div class="metodos-pago">
+                    <button type="button" class="metodo-pago-btn" data-metodo-pago="Nequi">
+                        Nequi
+                    </button>
+
+                    <button type="button" class="metodo-pago-btn" data-metodo-pago="Bancolombia">
+                        Bancolombia
+                    </button>
+
+                    <button type="button" class="metodo-pago-btn" data-metodo-pago="Contra entrega">
+                        Contra entrega
+                    </button>
+                    </div>
+
+                    <div class="info-metodo-pago" id="infoMetodoPago">
+                    Selecciona un método de pago para ver la información.
+                </div>
 
                 <input type="file" id="checkoutComprobante" accept="image/*,.pdf">
 
@@ -238,41 +251,45 @@
                 </form>
             </div>
             </div>
-    <footer class="footer" id="footer">
+        <footer class="footer" id="footer">
 
         <div class="footer-contenido">
 
             <!-- MARCA -->
             <div class="footer-seccion f1">
-            <h3>Soluciones M.E</h3>
-            <p>
-                Servicio técnico para celulares y computadores. Soluciones rápidas,
-                seguras y confiables.
+            <h3 class="logoFooter">
+                <img src="images/LogoFooter.png" alt="Logo">
+            </h3>
+            <p style="text-align: center;">
+                Importamos desde USA <br> directo a tus manos 
             </p>
             </div>
 
             <!-- CONTACTO -->
             <div class="footer-seccion f2">
             <h4>Contacto</h4>
-            <p><i class="bi bi-whatsapp"></i> WhatsApp: <br>+57 323 3404121</p>
-            <p><i class="bi bi-geo-alt"></i> Atención y soporte en remoto</p>
+            <p><i class="bi bi-whatsapp"></i> WhatsApp: +57 322 3349682</p>
+            <p><i class="bi bi-geo-alt"></i> Envios a toda Colombia</p>
             </div>
 
             <!-- SERVICIOS -->
             <div class="footer-seccion f3">
-            <h4>Servicios</h4>
-            <p>Reparación de celulares</p>
-            <p>Instalación de juegos</p>
-            <p>Servicio técnico PC</p>
+                <h4>Servicios</h4>
+
+                <p>Personal Shopper</p>
+                <p>Compras por encargo</p>
+                <p>Preventa USA</p>
+                <p>Envíos a Colombia</p>
+                <p>Asesoría para emprendedores</p>
             </div>
 
             <!-- REDES -->
             <div class="footer-seccion f4">
             <h4>Síguenos</h4>
             <div class="link">
-            <p><i class="bi bi-facebook"></i></p>
-            <p><i class="bi bi-whatsapp"></i></p>
-            <p><i class="bi bi-instagram"></i></p>
+            <p><a href="https://www.facebook.com/share/1EAkU14Fbb/?mibextid=wwXIfr"><i class="bi bi-facebook"></i></a></p>
+            <p><a href="https://wa.me/573001112233?text=Hola%20quiero%20información%20sobre%20sus%20productos" target="_blank"><i class="bi bi-whatsapp"></i></a></p>
+            <p><a href="https://www.instagram.com/riverashop.col?igsh=MzBkN2J1bGdjYXl5&utm_source=qr"><i class="bi bi-instagram"></i></a></p>
             </div>
             </div>
 
@@ -280,13 +297,13 @@
 
         <!-- COPYRIGHT -->
         <div class="footer-copy">
-            <p>© 2026 Soluciones M.E - Todos los derechos reservados</p>
+            <p>© 2026 Rivera Shop - Todos los derechos reservados</p>
         </div>
 
-    </footer>
+        </footer>
 
 
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script src="scripts.js?v=13"></script>
+    <script src="scripts.js?v=15"></script>
 </body>
 </html>

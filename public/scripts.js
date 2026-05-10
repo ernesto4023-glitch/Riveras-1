@@ -1,4 +1,4 @@
-const API_URL = "https://riverashop.net";
+const API_URL = "localhost";
 
 let monedaActual = localStorage.getItem("monedaActual") || "COP";
 let tasaCambio = Number(localStorage.getItem("tasaCambioCache")) || 4000;
@@ -2204,4 +2204,47 @@ document.addEventListener("click", e => {
   if (navbar) {
     navbar.classList.toggle("activo");
   }
+});
+
+/*METODO DE PAGO */
+
+document.querySelectorAll("[data-metodo-pago]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const metodo = btn.dataset.metodoPago;
+    const inputMetodo = document.getElementById("checkoutMetodoPago");
+    const info = document.getElementById("infoMetodoPago");
+
+    document.querySelectorAll("[data-metodo-pago]").forEach(b => {
+      b.classList.remove("activo");
+    });
+
+    btn.classList.add("activo");
+    inputMetodo.value = metodo;
+
+    if (metodo === "Nequi") {
+      info.innerHTML = `
+        <strong>Pago por Nequi</strong><br>
+        Número: 322 334 9682<br>
+        Titular: Christian Alejandro Rivera Ortiz<br>
+        Después de pagar, sube el comprobante.
+      `;
+    }
+
+    if (metodo === "Bancolombia") {
+      info.innerHTML = `
+        <strong>Pago por Bancolombia</strong><br>
+        Cuenta de ahorros: 59726688871<br>
+        Titular: Christian Alejandro Rivera Ortiz<br>
+        Después de pagar, sube el comprobante.
+      `;
+    }
+
+    if (metodo === "Contra entrega") {
+      info.innerHTML = `
+        <strong>Pago contra entrega</strong><br>
+        Pagas al recibir tu pedido.<br>
+        No necesitas subir comprobante.
+      `;
+    }
+  });
 });
