@@ -249,14 +249,6 @@ async function cargarFlyersIndex() {
 }
 
 cargarFlyersIndex();
-
-let flyerEditandoId = null;
-
-function editarFlyer(id) {
-  flyerEditandoId = id;
-  modalFlyer.classList.add("activo");
-}
-
 /* =========================
    ELEMENTOS ADMIN
 ========================= */
@@ -901,6 +893,15 @@ if (formProducto) {
     imagenesSeleccionadas.forEach(imagen => {
       formData.append("imagenes", imagen);
     });
+
+    formData.append("imagenActual", imagenActualProducto);
+    formData.append("imagenesActuales", imagenesActualesProducto);
+
+    const url = productoEditandoId
+      ? `${API_URL}/productos/${productoEditandoId}`
+      : `${API_URL}/productos`;
+
+    const method = productoEditandoId ? "PUT" : "POST";
 
     try {
       const res = await fetch(url, {
