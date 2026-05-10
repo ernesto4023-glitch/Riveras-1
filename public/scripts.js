@@ -102,8 +102,6 @@ async function guardarFlyer(formData) {
       throw new Error("Error al guardar flyer");
     }
 
-    flyerEditandoId = null;
-
     await cargarFlyersAdmin();
     await cargarFlyersIndex();
   } catch (error) {
@@ -493,7 +491,15 @@ async function cargarCategoriasIndex() {
   }
 }
 
-cargarCategoriasIndex();  
+cargarCategoriasIndex(); 
+
+let flyerEditandoId = null;
+
+function editarFlyer(id) {
+  flyerEditandoId = id;
+  modalFlyer.classList.add("activo");
+}
+
 
 /* =========================
    ADMIN: MODAL PRODUCTOS
