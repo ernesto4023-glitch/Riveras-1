@@ -1,5 +1,35 @@
 const API_URL = "http://localhost:3000";
 
+let monedaActual = localStorage.getItem("monedaActual") || "COP";
+let tasaCambio = Number(localStorage.getItem("tasaCambioCache")) || 4000;
+
+async function cargarTasaCambio() {
+  try {
+    const res = await fetch(`${API_URL}/configuracion/tasa-cambio`);
+    const data = await res.json();
+
+    tasaCambio = Number(data.tasa_cambio) || 4000;
+    localStorage.setItem("tasaCambioCache", tasaCambio);
+  } catch (error) {
+    console.error("No se pudo cargar la tasa de cambio", error);
+  }
+}
+
+function formatearPrecio(precioUSD) {
+  const precio = Number(precioUSD);
+
+  if (monedaActual === "USD") {
+    return `$${precio.toFixed(2)} USD`;
+  }
+
+  return `$${(precio * tasaCambio).toLocaleString()} COP`;
+}
+
+let categoriaEditandoId = null;
+let productoEditandoId = null;
+let imagenActualProducto = "";
+let imagenesActualesProducto = "[]";
+
 /* =========================
    ADMIN: FLYERS
 ========================= */
@@ -49,16 +79,30 @@ if (
   cargarFlyersAdmin();
 }
 
+
+function editarFlyer(id) {
+  flyerEditandoId = id;
+  modalFlyer.classList.add("activo");
+}
+
 async function guardarFlyer(formData) {
   try {
-    const res = await fetch(`${API_URL}/flyers`, {
-      method: "POST",
+    const url = flyerEditandoId
+      ? `${API_URL}/flyers/${flyerEditandoId}`
+      : `${API_URL}/flyers`;
+
+    const method = flyerEditandoId ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
       body: formData,
     });
 
     if (!res.ok) {
       throw new Error("Error al guardar flyer");
     }
+
+    flyerEditandoId = null;
 
     await cargarFlyersAdmin();
     await cargarFlyersIndex();
@@ -75,17 +119,75 @@ async function cargarFlyersAdmin() {
     const res = await fetch(`${API_URL}/flyers`);
     const flyers = await res.json();
 
-    contenedorFlyers.innerHTML = flyers.map(flyer => `
-      <div class="categoria-card">
-        <button class="eliminar-categoria" onclick="eliminarFlyer(${flyer.id})">X</button>
-        <img src="${API_URL}/${flyer.imagen}" alt="Flyer">
-      </div>
-    `).join("");
+    contenedorFlyers.innerHTML = `
+      <table class="admin-products-table">
+        <thead>
+          <tr>
+            <th>Flyer</th>
+            <th>Título</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+            <th>Prioridad</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${flyers.map(flyer => `
+            <tr>
+              <td>
+                <img 
+                  src="${API_URL}/${flyer.imagen}" 
+                  alt="Flyer"
+                  class="flyer-admin-img"
+                >
+              </td>
+
+              <td>
+                <div class="admin-product-info">
+                  <div>
+                    <h4>Flyer #${flyer.id}</h4>
+                    <span>Promocional</span>
+                  </div>
+                </div>
+              </td>
+
+              <td>
+                <span class="estado-producto activo">
+                  Activo
+                </span>
+              </td>
+
+              <td>${new Date().toLocaleDateString()}</td>
+
+              <td>
+                <span class="prioridad-media">Media</span>
+              </td>
+
+              <td>
+                <div class="admin-actions">
+                  <button onclick="editarFlyer(${flyer.id})">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+
+                  <button>
+                    <i class="bi bi-eye"></i>
+                  </button>
+
+                  <button class="delete" onclick="eliminarFlyer(${flyer.id})">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
   } catch (error) {
     console.error(error);
   }
 }
-
 async function eliminarFlyer(id) {
   const confirmar = confirm("¿Seguro que quieres eliminar este flyer?");
   if (!confirmar) return;
@@ -148,7 +250,12 @@ async function cargarFlyersIndex() {
 
 cargarFlyersIndex();
 
-/* MODAL CATEGORIA */
+let flyerEditandoId = null;
+
+function editarFlyer(id) {
+  flyerEditandoId = id;
+  modalFlyer.classList.add("activo");
+}
 
 /* =========================
    ELEMENTOS ADMIN
@@ -214,10 +321,17 @@ if (
   cargarCategoriasAdmin();
 }
 
+
 async function guardarCategoria(formData) {
   try {
-    const res = await fetch(`${API_URL}/categorias`, {
-      method: "POST",
+    const url = categoriaEditandoId
+      ? `${API_URL}/categorias/${categoriaEditandoId}`
+      : `${API_URL}/categorias`;
+
+    const method = categoriaEditandoId ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
       body: formData,
     });
 
@@ -226,25 +340,82 @@ async function guardarCategoria(formData) {
     }
 
     await cargarCategoriasAdmin();
+
   } catch (error) {
     console.error(error);
     alert("No se pudo guardar la categoría");
   }
 }
-
 async function cargarCategoriasAdmin() {
+  if (!contenedorCategorias) return;
+
   try {
     const res = await fetch(`${API_URL}/categorias`);
+    const categorias = await res.json();
 
-    if (!res.ok) {
-      throw new Error("Error al cargar categorías");
-    }
+    contenedorCategorias.innerHTML = `
+      <table class="admin-products-table">
+        <thead>
+          <tr>
+            <th>Imagen</th>
+            <th>Nombre</th>
+            <th>Productos</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
 
-    categorias = await res.json();
-    mostrarCategoriasAdmin();
+        <tbody>
+          ${categorias.map(categoria => `
+            <tr>
+              <td>
+                <img 
+                  src="${API_URL}/${categoria.imagen}" 
+                  alt="${categoria.nombre}"
+                  class="categoria-admin-img"
+                >
+              </td>
+
+              <td>
+                <div class="admin-product-info">
+                  <div>
+                    <h4>${categoria.nombre}</h4>
+                    <span>ID: ${categoria.id}</span>
+                  </div>
+                </div>
+              </td>
+
+              <td>0</td>
+
+              <td>
+                <span class="estado-producto activo">
+                  Activa
+                </span>
+              </td>
+
+              <td>${new Date().toLocaleDateString()}</td>
+
+              <td>
+                <div class="admin-actions">
+
+                  <button onclick="editarCategoria(${categoria.id})">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+
+                  <button class="delete" onclick="eliminarCategoria(${categoria.id})">
+                    <i class="bi bi-trash"></i>
+                  </button>
+
+                </div>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
   } catch (error) {
     console.error(error);
-    alert("No se pudieron cargar las categorías");
   }
 }
 
@@ -279,6 +450,7 @@ async function eliminarCategoria(id) {
     }
 
     await cargarCategoriasAdmin();
+    categoriaEditandoId = null;
     await cargarCategoriasIndex();
   } catch (error) {
     console.error(error);
@@ -286,6 +458,18 @@ async function eliminarCategoria(id) {
   }
 }
 
+async function editarCategoria(id) {
+  const res = await fetch(`${API_URL}/categorias`);
+  const categorias = await res.json();
+
+  const categoria = categorias.find(c => c.id == id);
+
+  if (!categoria) return;
+
+  categoriaEditandoId = id;
+  nombreCategoria.value = categoria.nombre;
+  modalCategoria.classList.add("activo");
+}
 /* =========================
    INDEX: CATEGORÍAS
 ========================= */
@@ -305,14 +489,12 @@ async function cargarCategoriasIndex() {
     const categoriasIndex = await res.json();
 
     contenedor.innerHTML = categoriasIndex.map(categoria => `
-      <div class="categoria-card">
+      <a href="catalogo.html?categoria=${categoria.id}" class="categoria-card categoria-link">
         <img src="${API_URL}/${categoria.imagen}" alt="${categoria.nombre}">
         <h3>${categoria.nombre}</h3>
-        <a href="categoria.html?id=${categoria.id}" class="btn-2">
-          Ver productos
-        </a>
-      </div>
+      </a>
     `).join("");
+
   } catch (error) {
     console.error(error);
     contenedor.innerHTML = "<p>No se pudieron cargar las categorías.</p>";
@@ -397,24 +579,30 @@ function cerrarModalProductoAdmin() {
   modalProducto.classList.remove("activo");
   formProducto.reset();
 
+  productoEditandoId = null;
+  imagenActualProducto = "";
+  imagenesActualesProducto = "[]";
+
   tallasProducto = [];
   coloresProducto = [];
   imagenesSeleccionadas = [];
   usaTallasProducto = true;
   usaColoresProducto = true;
   tipoTallaProducto = "";
+  tipoProducto = "normal";
 
   if (bloqueTallasProducto) bloqueTallasProducto.style.display = "block";
   if (bloqueColoresProducto) bloqueColoresProducto.style.display = "block";
   if (editorTallaPersonalizada) editorTallaPersonalizada.style.display = "none";
   if (opcionesTallas) opcionesTallas.innerHTML = "";
 
-  document.querySelectorAll("[data-tallas], [data-colores], [data-tipo-talla]").forEach(btn => {
+  document.querySelectorAll("[data-tallas], [data-colores], [data-tipo-talla], [data-tipo-producto]").forEach(btn => {
     btn.classList.remove("activo");
   });
 
   document.querySelector('[data-tallas="si"]')?.classList.add("activo");
   document.querySelector('[data-colores="si"]')?.classList.add("activo");
+  document.querySelector('[data-tipo-producto="normal"]')?.classList.add("activo");
 
   mostrarTallasSeleccionadas();
   mostrarColoresSeleccionados();
@@ -672,13 +860,24 @@ async function cargarCategoriasSelectProducto() {
   }
 }
 
+let tipoProducto = "normal";
+
+document.querySelectorAll("[data-tipo-producto]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("[data-tipo-producto]").forEach(b => b.classList.remove("activo"));
+    btn.classList.add("activo");
+
+    tipoProducto = btn.dataset.tipoProducto;
+  });
+});
+
 /* GUARDAR PRODUCTO */
 
 if (formProducto) {
   formProducto.addEventListener("submit", async e => {
     e.preventDefault();
 
-    if (imagenesSeleccionadas.length === 0) {
+    if (!productoEditandoId && imagenesSeleccionadas.length === 0) {
       alert("Selecciona mínimo una imagen");
       return;
     }
@@ -695,7 +894,7 @@ if (formProducto) {
     formData.append("usa_tallas", usaTallasProducto ? "1" : "0");
     formData.append("tipo_talla", tipoTallaProducto);
     formData.append("tallas", JSON.stringify(tallasProducto));
-
+    formData.append("tipo_producto", tipoProducto);
     formData.append("usa_colores", usaColoresProducto ? "1" : "0");
     formData.append("colores", JSON.stringify(coloresProducto));
 
@@ -704,8 +903,8 @@ if (formProducto) {
     });
 
     try {
-      const res = await fetch(`${API_URL}/productos`, {
-        method: "POST",
+      const res = await fetch(url, {
+        method,
         body: formData,
       });
 
@@ -733,24 +932,75 @@ async function cargarProductosAdmin() {
     const res = await fetch(`${API_URL}/productos`);
     const productos = await res.json();
 
-    contenedorProductos.innerHTML = productos.map(producto => `
-      <div class="producto-admin-card">
-        <a href="producto.html?id=${producto.id}" class="producto-card-link">
-          <img src="${API_URL}/${producto.imagen}" alt="${producto.nombre}">
+    contenedorProductos.innerHTML = `
+      <table class="admin-products-table">
+        <thead>
+          <tr>
+            <th><input type="checkbox"></th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th>Vendidos</th>
+            <th>Estado</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
 
-          <div class="producto-admin-info">
-            <h3>${producto.nombre}</h3>
-            <strong>$${Number(producto.precio).toLocaleString()}</strong>
-            <p>${producto.descripcion || ""}</p>
-          </div>
-        </a>
+        <tbody>
+          ${productos.map(producto => `
+            <tr>
+              <td><input type="checkbox"></td>
 
-        <div class="producto-card-actions">
-          <button class="btn-editar" onclick="event.preventDefault(); editarProducto(${producto.id})">✏️</button>
-          <button class="btn-eliminar" onclick="event.preventDefault(); eliminarProducto(${producto.id})">🗑️</button>
-        </div>
-      </div>
-    `).join("");
+              <td>
+                <div class="admin-product-info">
+                  <img src="${API_URL}/${producto.imagen}" alt="${producto.nombre}">
+                  <div>
+                    <h4>${producto.nombre}</h4>
+                    <span>SKU: ${producto.sku || "N/A"}</span>
+                  </div>
+                </div>
+              </td>
+
+              <td>${producto.categoria || "Sin categoría"}</td>
+
+              <td>${formatearPrecio(producto.precio)}</td>
+
+              <td class="${Number(producto.stock) <= 5 ? "stock-low" : "stock-ok"}">
+                ${producto.stock || 0}
+              </td>
+
+              <td>0</td>
+
+              <td>
+                <span class="estado-producto ${Number(producto.stock) <= 0 ? "agotado" : "activo"}">
+                  ${Number(producto.stock) <= 0 ? "Agotado" : "Activo"}
+                </span>
+              </td>
+
+              <td>${new Date().toLocaleDateString()}</td>
+
+              <td>
+                <div class="admin-actions">
+                  <button onclick="editarProducto(${producto.id})">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+
+                  <a href="producto.html?id=${producto.id}">
+                    <i class="bi bi-eye"></i>
+                  </a>
+
+                  <button class="delete" onclick="eliminarProducto(${producto.id})">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
   } catch (error) {
     console.error(error);
   }
@@ -777,8 +1027,41 @@ async function eliminarProducto(id) {
   }
 }
 
-function editarProducto(id) {
-  alert("Luego conectamos la edición del producto ID: " + id);
+async function editarProducto(id) {
+  try {
+    const res = await fetch(`${API_URL}/productos/${id}`);
+    const producto = await res.json();
+
+    productoEditandoId = id;
+    imagenActualProducto = producto.imagen;
+    imagenesActualesProducto = producto.imagenes || "[]";
+
+    await cargarCategoriasSelectProducto();
+
+    nombreProducto.value = producto.nombre;
+    precioProducto.value = producto.precio;
+    descripcionProducto.value = producto.descripcion;
+    categoriaProducto.value = producto.categoria_id;
+    marcaProducto.value = producto.marca || "";
+    stockProducto.value = producto.stock;
+    skuProducto.value = producto.sku || "";
+
+    usaTallasProducto = producto.usa_tallas == 1;
+    usaColoresProducto = producto.usa_colores == 1;
+    tipoTallaProducto = producto.tipo_talla || "";
+    tipoProducto = producto.tipo_producto || "normal";
+
+    tallasProducto = producto.tallas ? JSON.parse(producto.tallas) : [];
+    coloresProducto = producto.colores ? JSON.parse(producto.colores) : [];
+
+    mostrarTallasSeleccionadas();
+    mostrarColoresSeleccionados();
+
+    modalProducto.classList.add("activo");
+  } catch (error) {
+    console.error(error);
+    alert("No se pudo cargar el producto");
+  }
 }
 
 cargarProductosAdmin();
@@ -806,11 +1089,12 @@ async function cargarProductosIndex() {
 
         <div class="catalogo-card-info">
           <h3>${producto.nombre}</h3>
-          <strong>$${Number(producto.precio).toLocaleString()}</strong>
+          <strong>${formatearPrecio(producto.precio)}</strong>
           <div class="catalogo-stars">★★★★★ <span>(0)</span></div>
         </div>
 
         <button 
+          type="button"
           class="catalogo-cart btn-carrito-listado" 
           data-id="${producto.id}"
         >
@@ -892,7 +1176,7 @@ async function cargarDetalleProducto() {
           ★★★★★ <span>(0 reseñas)</span>
         </div>
 
-        <h2>$${Number(producto.precio).toLocaleString()}</h2>
+        <h2>${formatearPrecio(producto.precio)}</h2>
 
         <p class="producto-descripcion-detalle">
           ${producto.descripcion || ""}
@@ -1018,7 +1302,7 @@ async function cargarProductosSimilares(categoriaId, productoActualId) {
 
       <div class="catalogo-card-info">
         <h3>${producto.nombre}</h3>
-        <strong>$${Number(producto.precio).toLocaleString()}</strong>
+        <strong>${formatearPrecio(producto.precio)}</strong>
         <div class="catalogo-stars">★★★★★ <span>(0)</span></div>
       </div>
     </a>
@@ -1043,25 +1327,59 @@ async function cargarCatalogo() {
     const resProductos = await fetch(`${API_URL}/productos`);
     const resCategorias = await fetch(`${API_URL}/categorias`);
 
-    productosCatalogoData = await resProductos.json();
+    const todosLosProductos = await resProductos.json();
+    productosCatalogoData = todosLosProductos.filter(producto =>
+      producto.tipo_producto !== "preventa"
+    );
+
     const categorias = await resCategorias.json();
 
     filtros.innerHTML = `
-      <button class="activo" onclick="filtrarCatalogoCategoria('todos', this)">
+      <button 
+        class="activo" 
+        data-categoria="todos"
+        onclick="filtrarCatalogoCategoria('todos', this)"
+      >
         Todos los productos <span>${productosCatalogoData.length}</span>
       </button>
+
       ${categorias.map(categoria => {
         const total = productosCatalogoData.filter(p => p.categoria_id == categoria.id).length;
 
         return `
-          <button onclick="filtrarCatalogoCategoria('${categoria.id}', this)">
+          <button 
+            data-categoria="${categoria.id}"
+            onclick="filtrarCatalogoCategoria('${categoria.id}', this)"
+          >
             ${categoria.nombre} <span>${total}</span>
           </button>
         `;
       }).join("")}
     `;
 
-    pintarCatalogo(productosCatalogoData);
+    const params = new URLSearchParams(window.location.search);
+    const categoriaURL = params.get("categoria");
+
+    if (categoriaURL) {
+      categoriaActivaCatalogo = categoriaURL;
+
+      const botonCategoria = document.querySelector(
+        `.filtros-categorias button[data-categoria="${categoriaURL}"]`
+      );
+
+      document.querySelectorAll(".filtros-categorias button").forEach(btn => {
+        btn.classList.remove("activo");
+      });
+
+      if (botonCategoria) {
+        botonCategoria.classList.add("activo");
+      }
+
+      aplicarFiltrosCatalogo();
+    } else {
+      pintarCatalogo(productosCatalogoData);
+    }
+
   } catch (error) {
     console.error(error);
   }
@@ -1073,7 +1391,9 @@ function pintarCatalogo(productos) {
 
   if (!contenedor) return;
 
-  contador.textContent = `Mostrando ${productos.length} productos`;
+  if (contador) {
+    contador.textContent = `Mostrando ${productos.length} productos`;
+  }
 
   contenedor.innerHTML = productos.map(producto => `
     <a href="producto.html?id=${producto.id}" class="catalogo-card">
@@ -1083,16 +1403,18 @@ function pintarCatalogo(productos) {
 
       <div class="catalogo-card-info">
         <h3>${producto.nombre}</h3>
-        <strong>$${Number(producto.precio).toLocaleString()}</strong>
+        <strong>${formatearPrecio(producto.precio)}</strong>
         <div class="catalogo-stars">★★★★★ <span>(0)</span></div>
       </div>
 
       <button 
+        type="button"
         class="catalogo-cart btn-carrito-listado" 
         data-id="${producto.id}"
       >
         <i class="bi bi-cart"></i>
       </button>
+    </a>
   `).join("");
 }
 
@@ -1212,15 +1534,21 @@ document.addEventListener("click", async e => {
   }
 
   if (btnDetalle) {
-    agregarProductoDetalleAlCarrito();
-    return;
-  }
+  e.preventDefault();
+  e.stopPropagation();
 
-  if (btnListado) {
-    e.preventDefault();
-    const id = btnListado.dataset.id;
-    await agregarProductoListadoAlCarrito(id);
-  }
+  agregarProductoDetalleAlCarrito();
+  return;
+}
+
+if (btnListado) {
+  e.preventDefault();
+  e.stopPropagation();
+
+  const id = btnListado.dataset.id;
+  await agregarProductoListadoAlCarrito(id);
+  return;
+}
 });
 
 async function agregarProductoListadoAlCarrito(id) {
@@ -1241,7 +1569,6 @@ async function agregarProductoListadoAlCarrito(id) {
 
     guardarCarrito();
     pintarCarritoModal();
-    document.getElementById("modalCarrito").classList.add("activo");
   } catch (error) {
     console.error(error);
     alert("No se pudo agregar el producto");
@@ -1273,7 +1600,6 @@ function agregarProductoDetalleAlCarrito() {
 
   guardarCarrito();
   pintarCarritoModal();
-  document.getElementById("modalCarrito").classList.add("activo");
 }
 
 function pintarCarritoModal() {
@@ -1333,16 +1659,22 @@ function eliminarProductoCarrito(id) {
   guardarCarrito();
   pintarCarritoModal();
 }
-
 function actualizarTotalesCarrito() {
-  const contadorCarrito = document.getElementById("contadorCarrito");
-  const totalCarrito = document.getElementById("totalCarrito");
+  const cantidadTotal = carritoProductos.reduce((total, producto) => {
+    return total + Number(producto.cantidad);
+  }, 0);
 
-  const cantidadTotal = carritoProductos.reduce((total, producto) => total + producto.cantidad, 0);
-  const precioTotal = carritoProductos.reduce((total, producto) => total + producto.precio * producto.cantidad, 0);
+  const precioTotal = carritoProductos.reduce((total, producto) => {
+    return total + Number(producto.precio) * Number(producto.cantidad);
+  }, 0);
 
-  if (contadorCarrito) contadorCarrito.textContent = cantidadTotal;
-  if (totalCarrito) totalCarrito.textContent = `$${precioTotal.toLocaleString()}`;
+  document.querySelectorAll("#contadorCarrito").forEach(contador => {
+    contador.textContent = cantidadTotal;
+  });
+
+  document.querySelectorAll("#totalCarrito").forEach(total => {
+    total.textContent = `$${precioTotal.toLocaleString()}`;
+  });
 }
 
 function guardarCarrito() {
@@ -1351,3 +1683,518 @@ function guardarCarrito() {
 }
 
 actualizarTotalesCarrito();
+
+/*MODAL PERSONAL SHOPPER */
+
+const abrirModalServicio = document.getElementById("abrirModalServicio");
+const cerrarModalServicio = document.getElementById("cerrarModalServicio");
+const modalServicio = document.getElementById("modalServicio");
+const formServicio = document.getElementById("formServicio");
+
+if (abrirModalServicio && modalServicio) {
+  abrirModalServicio.addEventListener("click", () => {
+    modalServicio.classList.add("activo");
+  });
+}
+
+if (cerrarModalServicio && modalServicio) {
+  cerrarModalServicio.addEventListener("click", () => {
+    modalServicio.classList.remove("activo");
+  });
+}
+
+if (formServicio) {
+  formServicio.addEventListener("submit", e => {
+    e.preventDefault();
+
+    const nombre = document.getElementById("nombreServicio").value.trim();
+    const whatsapp = document.getElementById("whatsappServicio").value.trim();
+    const correo = document.getElementById("correoServicio").value.trim();
+    const mensaje = document.getElementById("mensajeServicio").value.trim();
+
+    const numeroDestino = "+19095447605";
+
+    const texto = `Hola, soy ${nombre}.%0A%0AQuiero solicitar el servicio de Personal Shopper.%0A%0A${mensaje}%0A%0AMi WhatsApp es: ${whatsapp}%0AMi correo es: ${correo}`;
+
+    window.open(`https://wa.me/${numeroDestino}?text=${texto}`, "_blank");
+
+    formServicio.reset();
+    modalServicio.classList.remove("activo");
+  });
+}
+
+/* =========================
+   PREVENTA
+========================= */
+
+let productosPreventaData = [];
+
+async function cargarPreventa() {
+  const contenedor = document.getElementById("productosPreventa");
+  const contador = document.getElementById("contadorPreventa");
+
+  if (!contenedor) return;
+
+  try {
+    const res = await fetch(`${API_URL}/productos`);
+    const productos = await res.json();
+
+    productosPreventaData = productos.filter(producto => 
+      producto.tipo_producto === "preventa"
+    );
+
+    pintarPreventa(productosPreventaData);
+  } catch (error) {
+    console.error(error);
+    contenedor.innerHTML = "<p>No se pudieron cargar los productos en preventa.</p>";
+  }
+}
+
+function pintarPreventa(productos) {
+  const contenedor = document.getElementById("productosPreventa");
+  const contador = document.getElementById("contadorPreventa");
+
+  if (!contenedor) return;
+
+  if (contador) {
+    contador.textContent = `Mostrando ${productos.length} productos en preventa`;
+  }
+
+  contenedor.innerHTML = productos.map(producto => `
+    <a href="producto.html?id=${producto.id}" class="catalogo-card">
+      <div class="catalogo-img">
+        <img src="${API_URL}/${producto.imagen}" alt="${producto.nombre}">
+      </div>
+
+      <div class="catalogo-card-info">
+        <h3>${producto.nombre}</h3>
+        <strong>${formatearPrecio(producto.precio)}</strong>
+        <div class="catalogo-stars">Preventa</div>
+      </div>
+
+      <button 
+        type="button"
+        class="catalogo-cart btn-carrito-listado" 
+        data-id="${producto.id}"
+      >
+        <i class="bi bi-cart"></i>
+      </button>
+    </a>
+  `).join("");
+}
+
+document.getElementById("ordenPreventa")?.addEventListener("change", e => {
+  let productos = [...productosPreventaData];
+
+  if (e.target.value === "mayor") {
+    productos.sort((a, b) => Number(b.precio) - Number(a.precio));
+  }
+
+  if (e.target.value === "menor") {
+    productos.sort((a, b) => Number(a.precio) - Number(b.precio));
+  }
+
+  if (e.target.value === "nombre") {
+    productos.sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }
+
+  pintarPreventa(productos);
+});
+
+document.getElementById("buscarPreventa")?.addEventListener("input", e => {
+  const texto = e.target.value.toLowerCase();
+
+  const productos = productosPreventaData.filter(producto =>
+    producto.nombre.toLowerCase().includes(texto) ||
+    producto.descripcion?.toLowerCase().includes(texto)
+  );
+
+  pintarPreventa(productos);
+});
+
+cargarPreventa();
+
+/* =========================
+   NOVEDADES
+========================= */
+
+let productosNovedadesData = [];
+
+async function cargarNovedades() {
+  const contenedor = document.getElementById("productosNovedades");
+
+  if (!contenedor) return;
+
+  try {
+    const res = await fetch(`${API_URL}/productos`);
+    const productos = await res.json();
+
+    const hoy = new Date();
+    const limite = new Date();
+    limite.setDate(hoy.getDate() - 4);
+
+    productosNovedadesData = productos.filter(producto => {
+      const fechaProducto = new Date(producto.created_at);
+      return fechaProducto >= limite;
+    });
+
+    pintarNovedades(productosNovedadesData);
+  } catch (error) {
+    console.error(error);
+    contenedor.innerHTML = "<p>No se pudieron cargar las novedades.</p>";
+  }
+}
+
+function pintarNovedades(productos) {
+  const contenedor = document.getElementById("productosNovedades");
+  const contador = document.getElementById("contadorNovedades");
+
+  if (!contenedor) return;
+
+  if (contador) {
+    contador.textContent = `Mostrando ${productos.length} novedades`;
+  }
+
+  contenedor.innerHTML = productos.map(producto => `
+      <a href="producto.html?id=${producto.id}" class="catalogo-card">
+      ${producto.tipo_producto === "preventa" ? `
+      <span class="badge-preventa">Preventa</span>
+    ` : ""} 
+      <div class="catalogo-img">
+        <img src="${API_URL}/${producto.imagen}" alt="${producto.nombre}">
+      </div>
+
+      <div class="catalogo-card-info">
+        <h3>${producto.nombre}</h3>
+        <strong>${formatearPrecio(producto.precio)}</strong>
+        <div class="catalogo-stars">Nuevo</div>
+      </div>
+
+      <button 
+        type="button"
+        class="catalogo-cart btn-carrito-listado" 
+        data-id="${producto.id}"
+      >
+        <i class="bi bi-cart"></i>
+      </button>
+    </a>
+  `).join("");
+}
+
+document.getElementById("ordenNovedades")?.addEventListener("change", e => {
+  let productos = [...productosNovedadesData];
+
+  if (e.target.value === "mayor") {
+    productos.sort((a, b) => Number(b.precio) - Number(a.precio));
+  }
+
+  if (e.target.value === "menor") {
+    productos.sort((a, b) => Number(a.precio) - Number(b.precio));
+  }
+
+  if (e.target.value === "nombre") {
+    productos.sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }
+
+  pintarNovedades(productos);
+});
+
+document.getElementById("buscarNovedades")?.addEventListener("input", e => {
+  const texto = e.target.value.toLowerCase();
+
+  const productos = productosNovedadesData.filter(producto =>
+    producto.nombre.toLowerCase().includes(texto) ||
+    producto.descripcion?.toLowerCase().includes(texto)
+  );
+
+  pintarNovedades(productos);
+});
+
+cargarNovedades();
+
+/* =========================
+   MONEDA / TASA DE CAMBIO
+========================= */
+
+document.getElementById("btnCOP")?.addEventListener("click", () => {
+  monedaActual = "COP";
+  localStorage.setItem("monedaActual", "COP");
+  location.reload();
+});
+
+document.getElementById("btnUSD")?.addEventListener("click", () => {
+  monedaActual = "USD";
+  localStorage.setItem("monedaActual", "USD");
+  location.reload();
+});
+
+document.getElementById("guardarTasaCambio")?.addEventListener("click", async () => {
+  const input = document.getElementById("tasaCambioInput");
+  const valor = Number(input.value);
+
+  if (!valor || valor <= 0) {
+    alert("Escribe una tasa válida");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/configuracion/tasa-cambio`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        tasa_cambio: valor
+      })
+    });
+
+    if (!res.ok) {
+      throw new Error("Error al guardar tasa");
+    }
+
+    tasaCambio = valor;
+
+    localStorage.setItem("tasaCambioCache", valor);
+    location.reload();
+    alert("Tasa de cambio actualizada");
+  } catch (error) {
+    console.error(error);
+    alert("No se pudo guardar la tasa");
+  }
+});
+
+async function iniciarMoneda() {
+  await cargarTasaCambio();
+
+  const inputTasa = document.getElementById("tasaCambioInput");
+  if (inputTasa) inputTasa.value = tasaCambio;
+
+  document.getElementById("btnCOP")?.classList.toggle("active", monedaActual === "COP");
+  document.getElementById("btnUSD")?.classList.toggle("active", monedaActual === "USD");
+}
+
+iniciarMoneda();
+
+
+/* =========================
+   CHECKOUT / PEDIDOS
+========================= */
+
+const modalCheckout = document.getElementById("modalCheckout");
+const cerrarCheckout = document.getElementById("cerrarCheckout");
+const formCheckout = document.getElementById("formCheckout");
+
+document.addEventListener("click", e => {
+  const btnCheckout = e.target.closest(".btn-finalizar-compra");
+
+  if (btnCheckout && modalCheckout) {
+    modalCheckout.classList.add("activo");
+  }
+});
+
+cerrarCheckout?.addEventListener("click", () => {
+  modalCheckout.classList.remove("activo");
+});
+
+formCheckout?.addEventListener("submit", async e => {
+  e.preventDefault();
+
+  if (carritoProductos.length === 0) {
+    alert("Tu carrito está vacío");
+    return;
+  }
+
+  const totalPedido = carritoProductos.reduce((total, producto) => {
+    return total + Number(producto.precio) * Number(producto.cantidad);
+  }, 0);
+
+  const formData = new FormData();
+
+  formData.append("nombre", document.getElementById("checkoutNombre").value.trim());
+  formData.append("whatsapp", document.getElementById("checkoutWhatsapp").value.trim());
+  formData.append("correo", document.getElementById("checkoutCorreo").value.trim());
+  formData.append("direccion", document.getElementById("checkoutDireccion").value.trim());
+  formData.append("ciudad", document.getElementById("checkoutCiudad").value.trim());
+  formData.append("metodo_pago", document.getElementById("checkoutMetodoPago").value);
+  formData.append("notas", document.getElementById("checkoutNotas").value.trim());
+  formData.append("productos", JSON.stringify(carritoProductos));
+  formData.append("total", totalPedido);
+  formData.append("moneda", "USD");
+
+  const comprobante = document.getElementById("checkoutComprobante").files[0];
+
+  if (comprobante) {
+    formData.append("comprobante", comprobante);
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/pedidos`, {
+      method: "POST",
+      body: formData
+    });
+
+    if (!res.ok) {
+      throw new Error("Error al crear pedido");
+    }
+
+    alert("Pedido enviado correctamente. Revisaremos tu pago y te contactaremos por WhatsApp.");
+
+    carritoProductos = [];
+    guardarCarrito();
+    pintarCarritoModal();
+
+    formCheckout.reset();
+    modalCheckout.classList.remove("activo");
+    document.getElementById("modalCarrito")?.classList.remove("activo");
+
+  } catch (error) {
+    console.error(error);
+    alert("No se pudo enviar el pedido");
+  }
+});
+
+/* =========================
+   ADMIN: PEDIDOS
+========================= */
+
+async function cargarPedidosAdmin() {
+  const contenedor = document.getElementById("contenedorPedidos");
+
+  if (!contenedor) return;
+
+  try {
+    const res = await fetch(`${API_URL}/pedidos`);
+    const pedidos = await res.json();
+    const pendientes = pedidos.filter(pedido => pedido.estado === "pendiente").length;
+
+const contadorPendientes = document.getElementById("contadorPedidosPendientes");
+
+if (contadorPendientes) {
+  contadorPendientes.textContent = pendientes;
+}
+
+    contenedor.innerHTML = `
+      <table class="admin-products-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Cliente</th>
+            <th>WhatsApp</th>
+            <th>Método</th>
+            <th>Total</th>
+            <th>Estado</th>
+            <th>Comprobante</th>
+            <th>Fecha</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${pedidos.map(pedido => `
+            <tr>
+              <td>#${pedido.id}</td>
+
+              <td>
+                <div class="admin-product-info">
+                  <div>
+                    <h4>${pedido.nombre}</h4>
+                    <span>${pedido.correo || "Sin correo"}</span>
+                  </div>
+                </div>
+              </td>
+
+              <td>${pedido.whatsapp}</td>
+
+              <td>${pedido.metodo_pago}</td>
+
+              <td>$${Number(pedido.total).toLocaleString()} ${pedido.moneda}</td>
+
+              <td>
+                <span class="estado-producto ${pedido.estado === "verificado" ? "activo" : "agotado"}">
+                  ${pedido.estado}
+                </span>
+              </td>
+
+              <td>
+                ${pedido.comprobante ? `
+                  <a 
+                    href="${API_URL}/${pedido.comprobante}" 
+                    target="_blank" 
+                    class="link-comprobante"
+                  >
+                    Ver comprobante
+                  </a>
+                ` : "Sin comprobante"}
+              </td>
+
+              <td>${new Date(pedido.created_at).toLocaleDateString()}</td>
+
+              <td>
+                <div class="admin-actions">
+                  <button onclick="verificarPedido(${pedido.id}, '${pedido.whatsapp}', '${pedido.nombre}')">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+
+                  <button onclick='verDetallePedido(${JSON.stringify(pedido.productos)})'>
+                    <i class="bi bi-eye"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function verificarPedido(id, whatsapp, nombre) {
+  try {
+    const res = await fetch(`${API_URL}/pedidos/${id}/verificar`, {
+      method: "PUT"
+    });
+
+    if (!res.ok) {
+      throw new Error("Error al verificar pedido");
+    }
+
+    await cargarPedidosAdmin();
+
+    const numero = whatsapp.replace(/\D/g, "");
+    const mensaje = `Hola ${nombre}, tu pedido #${id} fue verificado correctamente. Pronto coordinaremos el envío.`;
+
+    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`, "_blank");
+
+  } catch (error) {
+    console.error(error);
+    alert("No se pudo verificar el pedido");
+  }
+}
+
+function verDetallePedido(productosJSON) {
+  const productos = typeof productosJSON === "string"
+    ? JSON.parse(productosJSON)
+    : productosJSON;
+
+  const detalle = productos.map(producto => {
+    return `${producto.nombre} | Cantidad: ${producto.cantidad} | Talla: ${producto.talla || "N/A"} | Color: ${producto.color || "N/A"}`;
+  }).join("\n");
+
+  alert(detalle);
+}
+
+cargarPedidosAdmin();
+
+document.addEventListener("click", e => {
+  const btn = e.target.closest("#btnMenuMobile");
+
+  if (!btn) return;
+
+  const navbar = document.getElementById("navbarMobile");
+
+  if (navbar) {
+    navbar.classList.toggle("activo");
+  }
+});

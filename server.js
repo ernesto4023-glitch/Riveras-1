@@ -115,6 +115,32 @@ app.delete("/flyers/:id", async (req, res) => {
   }
 });
 
+app.put("/flyers/:id", uploadFlyer.single("imagen"), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        message: "Debes subir una imagen"
+      });
+    }
+
+    const imagen = `uploads/flyers/${req.file.filename}`;
+
+    await db.query(
+      "UPDATE flyers SET imagen = ? WHERE id = ?",
+      [imagen, id]
+    );
+
+    res.json({
+      message: "Flyer actualizado correctamente"
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(error);
+  }
+});
+
 /* =========================
    MULTER CATEGORÍAS
 ========================= */
@@ -171,6 +197,31 @@ app.post("/categorias", uploadCategoria.single("imagen"), async (req, res) => {
       imagen,
     });
   } catch (error) {
+    res.status(500).json(error);
+  }
+});
+
+app.put("/categorias/:id", uploadCategoria.single("imagen"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nombre } = req.body;
+
+    let query = "UPDATE categorias SET nombre = ? WHERE id = ?";
+    let values = [nombre, id];
+
+    if (req.file) {
+      const imagen = `uploads/categorias/${req.file.filename}`;
+      query = "UPDATE categorias SET nombre = ?, imagen = ? WHERE id = ?";
+      values = [nombre, imagen, id];
+    }
+
+    await db.query(query, values);
+
+    res.json({
+      message: "Categoría actualizada correctamente"
+    });
+  } catch (error) {
+    console.error(error);
     res.status(500).json(error);
   }
 });
@@ -289,6 +340,7 @@ app.post("/productos", uploadProducto.array("imagenes", 6), async (req, res) => 
       tallas,
       usa_tallas,
       tipo_talla,
+      tipo_producto,
       usa_colores,
       colores,
     } = req.body;
@@ -316,9 +368,9 @@ app.post("/productos", uploadProducto.array("imagenes", 6), async (req, res) => 
       (
         nombre, precio, descripcion, imagen, imagenes,
         categoria_id, marca, stock, sku, tallas,
-        usa_tallas, tipo_talla, usa_colores, colores
+        usa_tallas, tipo_talla, tipo_producto, usa_colores, colores
       ) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         nombre,
         precio,
@@ -332,6 +384,7 @@ app.post("/productos", uploadProducto.array("imagenes", 6), async (req, res) => 
         tallas || "[]",
         usa_tallas || 0,
         tipo_talla || "",
+        tipo_producto || "normal",
         usa_colores || 0,
         colores || "[]",
       ]
@@ -351,6 +404,7 @@ app.post("/productos", uploadProducto.array("imagenes", 6), async (req, res) => 
       tallas,
       usa_tallas,
       tipo_talla,
+      tipo_producto: tipo_producto || "normal",
       usa_colores,
       colores,
     });
@@ -380,6 +434,240 @@ app.delete("/productos/:id", async (req, res) => {
     res.json({
       message: "Producto eliminado correctamente",
     });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(error);
+  }
+});
+
+app.put("/productos/:id", uploadProducto.array("imagenes", 6), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const {
+      nombre,
+      precio,
+      descripcion,
+      categoria_id,
+      marca,
+      stock,
+      sku,
+      tallas,
+      usa_tallas,
+      tipo_talla,
+      tipo_producto,
+      usa_colores,
+      colores,
+    } = req.body;
+
+    let imagenPrincipal = req.body.imagenActual || "";
+    let imagenes = req.body.imagenesActuales || "[]";
+
+    if (req.files && req.files.length > 0) {
+      const nuevasImagenes = req.files.map(file => `uploads/productos/${file.filename}`);
+      imagenPrincipal = nuevasImagenes[0];
+      imagenes = JSON.stringify(nuevasImagenes);
+    }
+
+    await db.query(
+      `UPDATE productos SET
+        nombre = ?,
+        precio = ?,
+        descripcion = ?,
+        imagen = ?,
+        imagenes = ?,
+        categoria_id = ?,
+        marca = ?,
+        stock = ?,
+        sku = ?,
+        tallas = ?,
+        usa_tallas = ?,
+        tipo_talla = ?,
+        tipo_producto = ?,
+        usa_colores = ?,
+        colores = ?
+      WHERE id = ?`,
+      [
+        nombre,
+        precio,
+        descripcion,
+        imagenPrincipal,
+        imagenes,
+        categoria_id,
+        marca || "",
+        stock,
+        sku || "",
+        tallas || "[]",
+        usa_tallas || 0,
+        tipo_talla || "",
+        tipo_producto || "normal",
+        usa_colores || 0,
+        colores || "[]",
+        id
+      ]
+    );
+
+    res.json({
+      message: "Producto actualizado correctamente"
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(error);
+  }
+});
+/* =========================
+   CONFIGURACIÓN
+========================= */
+
+app.get("/configuracion/tasa-cambio", async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      "SELECT valor FROM configuracion WHERE clave = ?",
+      ["tasa_cambio"]
+    );
+
+    res.json({
+      tasa_cambio: rows.length ? Number(rows[0].valor) : 4000,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(error);
+  }
+});
+
+app.put("/configuracion/tasa-cambio", async (req, res) => {
+  try {
+    const { tasa_cambio } = req.body;
+
+    if (!tasa_cambio || Number(tasa_cambio) <= 0) {
+      return res.status(400).json({
+        message: "Tasa inválida",
+      });
+    }
+
+    await db.query(
+      `
+      INSERT INTO configuracion (clave, valor)
+      VALUES ('tasa_cambio', ?)
+      ON DUPLICATE KEY UPDATE valor = VALUES(valor)
+      `,
+      [tasa_cambio]
+    );
+
+    res.json({
+      message: "Tasa actualizada",
+      tasa_cambio: Number(tasa_cambio),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(error);
+  }
+});
+
+/* =========================
+   PEDIDOS
+========================= */
+
+const storageComprobantes = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/comprobantes");
+  },
+  filename: (req, file, cb) => {
+    const nombreArchivo = Date.now() + "-" + file.originalname;
+    cb(null, nombreArchivo);
+  }
+});
+
+const uploadComprobante = multer({
+  storage: storageComprobantes
+});
+
+app.post("/pedidos", uploadComprobante.single("comprobante"), async (req, res) => {
+  try {
+    const {
+      nombre,
+      whatsapp,
+      correo,
+      direccion,
+      ciudad,
+      metodo_pago,
+      productos,
+      total,
+      moneda,
+      notas
+    } = req.body;
+
+    if (!nombre || !whatsapp || !direccion || !ciudad || !metodo_pago || !productos || !total) {
+      return res.status(400).json({
+        message: "Faltan campos obligatorios"
+      });
+    }
+
+    const comprobante = req.file
+      ? `uploads/comprobantes/${req.file.filename}`
+      : null;
+
+    const [result] = await db.query(
+      `INSERT INTO pedidos
+      (
+        nombre, whatsapp, correo, direccion, ciudad,
+        metodo_pago, comprobante, productos, total, moneda, notas
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        nombre,
+        whatsapp,
+        correo || "",
+        direccion,
+        ciudad,
+        metodo_pago,
+        comprobante,
+        productos,
+        total,
+        moneda || "COP",
+        notas || ""
+      ]
+    );
+
+    res.json({
+      id: result.insertId,
+      message: "Pedido creado correctamente"
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(error);
+  }
+});
+
+app.get("/pedidos", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT *
+      FROM pedidos
+      ORDER BY id DESC
+    `);
+
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json(error);
+  }
+});
+
+app.put("/pedidos/:id/verificar", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await db.query(
+      "UPDATE pedidos SET estado = ? WHERE id = ?",
+      ["verificado", id]
+    );
+
+    res.json({
+      message: "Pedido verificado correctamente"
+    });
+
   } catch (error) {
     console.error(error);
     res.status(500).json(error);

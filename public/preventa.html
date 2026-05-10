@@ -3,11 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Catálogo | Rivera Shop</title>
+  <title>Preventa | Rivera Shop</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
 </head>
 <body>
 
@@ -21,25 +20,25 @@
       <i class="bi bi-list"></i>
     </button>
 
-      <nav class="nav-link" id="navbarMobile">
-          <a href="index.html" class="activo">Inicio</a>
-          <a href="catalogo.html" >Catalogo</a>
-          <a href="Preventa.html">Preventa</a>
-          <a href="novedades.html">Novedades</a>
-          <a href="#">Contacto</a>
-          <div class="currency-switch">
-          <button type="button" id="btnCOP">
-              🇨🇴 <span>COP</span>
-          </button>
+    <nav class="nav-link" id="navbarMobile">
+        <a href="index.html" class="activo">Inicio</a>
+        <a href="catalogo.html" >Catalogo</a>
+        <a href="Preventa.html">Preventa</a>
+        <a href="novedades.html">Novedades</a>
+        <a href="#">Contacto</a>
+      <div class="currency-switch">
+        <button type="button" id="btnCOP">
+            🇨🇴 <span>COP</span>
+        </button>
 
-          <button type="button" id="btnUSD">
-              🇺🇸 <span>USD</span>
-          </button>
-        </div>
-      </nav>
+        <button type="button" id="btnUSD">
+            🇺🇸 <span>USD</span>
+        </button>
+      </div>
+    </nav>
 
     <div class="catalogo-search">
-      <input type="text" id="buscarCatalogo" placeholder="Buscar productos...">
+      <input type="text" id="buscarPreventa" placeholder="Buscar en preventa...">
       <span>🔍</span>
     </div>
   </div>
@@ -48,17 +47,17 @@
 <main class="catalogo-page container">
 
   <div class="breadcrumb">
-    Inicio › Catálogo
+    Inicio › Preventa
   </div>
 
   <section class="catalogo-top">
     <div>
-      <h1>Catálogo</h1>
-      <p>Explora todos nuestros productos</p>
+      <h1>Preventa</h1>
+      <p>Productos disponibles para reservar antes de su llegada.</p>
     </div>
 
     <div class="catalogo-controls">
-      <select id="ordenCatalogo">
+      <select id="ordenPreventa">
         <option value="recientes">Más recientes</option>
         <option value="mayor">Mayor precio</option>
         <option value="menor">Menor precio</option>
@@ -67,33 +66,12 @@
     </div>
   </section>
 
-  <section class="catalogo-layout">
+  <section class="catalogo-main">
+    <div class="catalogo-info">
+      <span id="contadorPreventa">Mostrando productos en preventa</span>
+    </div>
 
-    <aside class="catalogo-sidebar">
-      <h3>Categorías</h3>
-
-      <div id="filtrosCategorias" class="filtros-categorias"></div>
-
-      <div class="filtro-box">
-        <h3>Filtrar por precio</h3>
-
-        <div class="precio-inputs">
-          <input type="number" id="precioMin" placeholder="$ 0">
-          <input type="number" id="precioMax" placeholder="$ 200">
-        </div>
-
-        <button id="filtrarPrecio">Filtrar</button>
-      </div>
-    </aside>
-
-    <section class="catalogo-main">
-      <div class="catalogo-info">
-        <span id="contadorCatalogo">Mostrando productos</span>
-      </div>
-
-      <div id="productosCatalogo" class="catalogo-grid"></div>
-    </section>
-
+    <div id="productosPreventa" class="catalogo-grid"></div>
   </section>
 
 </main>
@@ -127,10 +105,6 @@
     </form>
   </div>
 </div>
-
-<button type="button" id="btnCarritoFlotante" class="carrito-flotante">
-<i class="bi bi-cart"></i> <span id="contadorCarrito">0</span>
-</button>
 
 <script src="scripts.js"></script>
 </body>
