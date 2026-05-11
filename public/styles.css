@@ -1386,6 +1386,11 @@ td {
 }
 
 @media (max-width: 900px) {
+  .logo{
+    position: relative;
+    left: 22px;
+    
+  }
   .extra-content {
     display: none;
   }
