@@ -1,4 +1,4 @@
-const API_URL = "https://riverashop.net";
+const API_URL = 'https://riverashop.net';
 
 let monedaActual = localStorage.getItem("monedaActual") || "COP";
 let tasaCambio = Number(localStorage.getItem("tasaCambioCache")) || 4000;
@@ -800,17 +800,39 @@ function mostrarPreviewImagenes() {
   contadorImagenes.textContent = `${imagenesSeleccionadas.length}/6 imágenes`;
   previewGaleria.innerHTML = "";
 
-  for (let i = 0; i < 6; i++) {
+  imagenesSeleccionadas.forEach((imagen, index) => {
     const item = document.createElement("div");
 
-    if (imagenesSeleccionadas[i]) {
-      item.style.backgroundImage = `url(${URL.createObjectURL(imagenesSeleccionadas[i])})`;
-    }
+    item.classList.add("preview-item");
+    item.draggable = true;
+    item.dataset.index = index;
+    item.style.backgroundImage = `url(${URL.createObjectURL(imagen)})`;
+
+    item.innerHTML = `<span>${index + 1}</span>`;
+
+    item.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("index", index);
+    });
+
+    item.addEventListener("dragover", e => {
+      e.preventDefault();
+    });
+
+    item.addEventListener("drop", e => {
+      e.preventDefault();
+
+      const indexOrigen = Number(e.dataTransfer.getData("index"));
+      const indexDestino = Number(item.dataset.index);
+
+      const imagenMovida = imagenesSeleccionadas.splice(indexOrigen, 1)[0];
+      imagenesSeleccionadas.splice(indexDestino, 0, imagenMovida);
+
+      mostrarPreviewImagenes();
+    });
 
     previewGaleria.appendChild(item);
-  }
+  });
 }
-
 
 /* IMÁGENES */
 

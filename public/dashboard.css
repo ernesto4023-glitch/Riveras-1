@@ -1123,6 +1123,26 @@ ADMIN CSS
   cursor: pointer;
 }
 
+.preview-item {
+  position: relative;
+  cursor: grab;
+}
+
+.preview-item span {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: #D4AF37;
+  color: #050505;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 /* =========================
    RESPONSIVE ADMIN
 ========================= */
