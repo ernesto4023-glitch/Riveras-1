@@ -29,6 +29,8 @@ let categoriaEditandoId = null;
 let productoEditandoId = null;
 let imagenActualProducto = "";
 let imagenesActualesProducto = "[]";
+let imagenesActualesPreview = [];
+const videoProducto = document.getElementById("videoProducto");
 
 /* =========================
    ADMIN: FLYERS
@@ -580,6 +582,7 @@ function cerrarModalProductoAdmin() {
   productoEditandoId = null;
   imagenActualProducto = "";
   imagenesActualesProducto = "[]";
+  imagenesActualesPreview = [];
 
   tallasProducto = [];
   coloresProducto = [];
@@ -797,16 +800,26 @@ if (imagenesProducto) {
 function mostrarPreviewImagenes() {
   if (!previewGaleria || !contadorImagenes) return;
 
-  contadorImagenes.textContent = `${imagenesSeleccionadas.length}/6 imágenes`;
+  const imagenesPreview = [
+    ...imagenesActualesPreview,
+    ...imagenesSeleccionadas
+  ];
+
+  contadorImagenes.textContent = `${imagenesPreview.length}/6 imágenes`;
   previewGaleria.innerHTML = "";
 
-  imagenesSeleccionadas.forEach((imagen, index) => {
+  imagenesPreview.forEach((imagen, index) => {
     const item = document.createElement("div");
 
     item.classList.add("preview-item");
     item.draggable = true;
     item.dataset.index = index;
-    item.style.backgroundImage = `url(${URL.createObjectURL(imagen)})`;
+
+    if (typeof imagen === "string") {
+      item.style.backgroundImage = `url(${API_URL}/${imagen})`;
+    } else {
+      item.style.backgroundImage = `url(${URL.createObjectURL(imagen)})`;
+    }
 
     item.innerHTML = `<span>${index + 1}</span>`;
 
@@ -824,40 +837,20 @@ function mostrarPreviewImagenes() {
       const indexOrigen = Number(e.dataTransfer.getData("index"));
       const indexDestino = Number(item.dataset.index);
 
-      const imagenMovida = imagenesSeleccionadas.splice(indexOrigen, 1)[0];
-      imagenesSeleccionadas.splice(indexDestino, 0, imagenMovida);
+      const imagenMovida = imagenesPreview.splice(indexOrigen, 1)[0];
+      imagenesPreview.splice(indexDestino, 0, imagenMovida);
+
+      imagenesActualesPreview = imagenesPreview.filter(img => typeof img === "string");
+      imagenesSeleccionadas = imagenesPreview.filter(img => typeof img !== "string");
+
+      imagenesActualesProducto = JSON.stringify(imagenesActualesPreview);
+      imagenActualProducto = imagenesActualesPreview[0] || "";
 
       mostrarPreviewImagenes();
     });
 
     previewGaleria.appendChild(item);
   });
-}
-
-/* IMÁGENES */
-
-if (imagenesProducto) {
-  imagenesProducto.addEventListener("change", () => {
-    imagenesSeleccionadas = Array.from(imagenesProducto.files).slice(0, 6);
-    mostrarPreviewImagenes();
-  });
-}
-
-function mostrarPreviewImagenes() {
-  if (!previewGaleria || !contadorImagenes) return;
-
-  contadorImagenes.textContent = `${imagenesSeleccionadas.length}/6 imágenes`;
-  previewGaleria.innerHTML = "";
-
-  for (let i = 0; i < 6; i++) {
-    const item = document.createElement("div");
-
-    if (imagenesSeleccionadas[i]) {
-      item.style.backgroundImage = `url(${URL.createObjectURL(imagenesSeleccionadas[i])})`;
-    }
-
-    previewGaleria.appendChild(item);
-  }
 }
 
 /* CATEGORÍAS EN SELECT */
@@ -917,13 +910,16 @@ if (formProducto) {
     formData.append("tipo_producto", tipoProducto);
     formData.append("usa_colores", usaColoresProducto ? "1" : "0");
     formData.append("colores", JSON.stringify(coloresProducto));
+    formData.append("imagenActual", imagenActualProducto || imagenesActualesPreview[0] || "");
+    formData.append("imagenesActuales", JSON.stringify(imagenesActualesPreview));
+    formData.append("video", videoProducto.files[0]);
 
     imagenesSeleccionadas.forEach(imagen => {
       formData.append("imagenes", imagen);
     });
 
-    formData.append("imagenActual", imagenActualProducto);
-    formData.append("imagenesActuales", imagenesActualesProducto);
+    const video = videoProducto?.files[0];
+    if (video) formData.append("video", video);
 
     const url = productoEditandoId
       ? `${API_URL}/productos/${productoEditandoId}`
@@ -1055,7 +1051,6 @@ async function eliminarProducto(id) {
     alert("No se pudo eliminar el producto");
   }
 }
-
 async function editarProducto(id) {
   try {
     const res = await fetch(`${API_URL}/productos/${id}`);
@@ -1064,6 +1059,12 @@ async function editarProducto(id) {
     productoEditandoId = id;
     imagenActualProducto = producto.imagen;
     imagenesActualesProducto = producto.imagenes || "[]";
+
+    imagenesActualesPreview = producto.imagenes
+      ? JSON.parse(producto.imagenes)
+      : [producto.imagen];
+
+    imagenesSeleccionadas = [];
 
     await cargarCategoriasSelectProducto();
 
@@ -1085,6 +1086,7 @@ async function editarProducto(id) {
 
     mostrarTallasSeleccionadas();
     mostrarColoresSeleccionados();
+    mostrarPreviewImagenes();
 
     modalProducto.classList.add("activo");
   } catch (error) {
@@ -1195,6 +1197,12 @@ async function cargarDetalleProducto() {
           <img id="imagenPrincipalProducto" src="${API_URL}/${imagenes[0]}" alt="${producto.nombre}">
         </div>
       </div>
+
+      ${producto.video ? `
+        <div class="producto-video">
+          <video controls src="${API_URL}/${producto.video}"></video>
+        </div>
+      ` : ""}
 
       <div class="producto-info-detalle">
         <span class="producto-categoria-tag">${producto.categoria}</span>

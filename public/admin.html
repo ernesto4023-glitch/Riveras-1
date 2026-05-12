@@ -209,7 +209,14 @@
 
                 <div class="form-group">
                   <label>Precio *</label>
-                  <input type="number" id="precioProducto" placeholder="0.00" required>
+                  <input 
+                    type="number" 
+                    id="precioProducto" 
+                    step="0.01" 
+                    min="0" 
+                    placeholder="Precio en USD"
+                    required
+                  >
                 </div>
               </div>
 
@@ -319,6 +326,16 @@
                 <p>o arrastra y suelta</p>
                 <small>Formatos: JPG, PNG, WEBP. Máx. 5MB</small>
               </label>
+
+              <div class="form-group">
+                <label>Video del producto</label>
+                <input 
+                  type="file" 
+                  id="videoProducto" 
+                  accept="video/mp4,video/webm,video/quicktime"
+                >
+                <small>Máximo 20MB. Formatos: MP4, WEBM, MOV.</small>
+              </div>
 
               <input type="file" id="imagenesProducto" accept="image/*" multiple hidden>
 
@@ -433,6 +450,6 @@
   });
 </script>
 
-<script src="scripts.js?v=12"></script>
+<script src="scripts.js?v=16"></script>
 </body>
 </html>

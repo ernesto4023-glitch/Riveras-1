@@ -260,14 +260,23 @@ app.delete("/categorias/:id", async (req, res) => {
 ========================= */
 
 const productosPath = path.join(__dirname, "uploads", "productos");
+const videosPath = path.join(__dirname, "uploads", "videos");
 
 if (!fs.existsSync(productosPath)) {
   fs.mkdirSync(productosPath, { recursive: true });
 }
 
-const storageProductos = multer.diskStorage({
+if (!fs.existsSync(videosPath)) {
+  fs.mkdirSync(videosPath, { recursive: true });
+}
+
+const storageProducto = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, productosPath);
+    if (file.fieldname === "video") {
+      cb(null, videosPath);
+    } else {
+      cb(null, productosPath);
+    }
   },
   filename: (req, file, cb) => {
     const nombreArchivo =
@@ -278,7 +287,10 @@ const storageProductos = multer.diskStorage({
 });
 
 const uploadProducto = multer({
-  storage: storageProductos,
+  storage: storageProducto,
+  limits: {
+    fileSize: 20 * 1024 * 1024,
+  },
 });
 
 app.get("/productos", async (req, res) => {
@@ -304,7 +316,8 @@ app.get("/productos/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [rows] = await db.query(`
+    const [rows] = await db.query(
+      `
       SELECT 
         productos.*,
         categorias.nombre AS categoria
@@ -312,11 +325,13 @@ app.get("/productos/:id", async (req, res) => {
       LEFT JOIN categorias
       ON productos.categoria_id = categorias.id
       WHERE productos.id = ?
-    `, [id]);
+      `,
+      [id]
+    );
 
     if (rows.length === 0) {
       return res.status(404).json({
-        message: "Producto no encontrado"
+        message: "Producto no encontrado",
       });
     }
 
@@ -327,93 +342,108 @@ app.get("/productos/:id", async (req, res) => {
   }
 });
 
-app.post("/productos", uploadProducto.array("imagenes", 6), async (req, res) => {
-  try {
-    const {
-      nombre,
-      precio,
-      descripcion,
-      categoria_id,
-      marca,
-      stock,
-      sku,
-      tallas,
-      usa_tallas,
-      tipo_talla,
-      tipo_producto,
-      usa_colores,
-      colores,
-    } = req.body;
-
-    if (!nombre || !precio || !descripcion || !categoria_id || !stock) {
-      return res.status(400).json({
-        message: "Faltan campos obligatorios",
-      });
-    }
-
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({
-        message: "Debes subir mínimo una imagen",
-      });
-    }
-
-    const imagenPrincipal = `uploads/productos/${req.files[0].filename}`;
-
-    const imagenes = req.files.map(file => {
-      return `uploads/productos/${file.filename}`;
-    });
-
-    const [result] = await db.query(
-      `INSERT INTO productos 
-      (
-        nombre, precio, descripcion, imagen, imagenes,
-        categoria_id, marca, stock, sku, tallas,
-        usa_tallas, tipo_talla, tipo_producto, usa_colores, colores
-      ) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
+app.post(
+  "/productos",
+  uploadProducto.fields([
+    { name: "imagenes", maxCount: 6 },
+    { name: "video", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      const {
         nombre,
         precio,
         descripcion,
-        imagenPrincipal,
-        JSON.stringify(imagenes),
         categoria_id,
-        marca || "",
+        marca,
         stock,
-        sku || "",
-        tallas || "[]",
-        usa_tallas || 0,
-        tipo_talla || "",
-        tipo_producto || "normal",
-        usa_colores || 0,
-        colores || "[]",
-      ]
-    );
+        sku,
+        tallas,
+        usa_tallas,
+        tipo_talla,
+        tipo_producto,
+        usa_colores,
+        colores,
+      } = req.body;
 
-    res.json({
-      id: result.insertId,
-      nombre,
-      precio,
-      descripcion,
-      imagen: imagenPrincipal,
-      imagenes,
-      categoria_id,
-      marca,
-      stock,
-      sku,
-      tallas,
-      usa_tallas,
-      tipo_talla,
-      tipo_producto: tipo_producto || "normal",
-      usa_colores,
-      colores,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json(error);
+      if (!nombre || !precio || !descripcion || !categoria_id || !stock) {
+        return res.status(400).json({
+          message: "Faltan campos obligatorios",
+        });
+      }
+
+      const imagenesFiles = req.files?.imagenes || [];
+      const videoFile = req.files?.video ? req.files.video[0] : null;
+
+      if (imagenesFiles.length === 0) {
+        return res.status(400).json({
+          message: "Debes subir mínimo una imagen",
+        });
+      }
+
+      const imagenPrincipal = `uploads/productos/${imagenesFiles[0].filename}`;
+
+      const imagenes = imagenesFiles.map(file => {
+        return `uploads/productos/${file.filename}`;
+      });
+
+      const video = videoFile
+        ? `uploads/videos/${videoFile.filename}`
+        : "";
+
+      const [result] = await db.query(
+        `INSERT INTO productos 
+        (
+          nombre, precio, descripcion, imagen, imagenes,
+          categoria_id, marca, stock, sku, tallas,
+          usa_tallas, tipo_talla, tipo_producto, usa_colores, colores, video
+        ) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          nombre,
+          precio,
+          descripcion,
+          imagenPrincipal,
+          JSON.stringify(imagenes),
+          categoria_id,
+          marca || "",
+          stock,
+          sku || "",
+          tallas || "[]",
+          usa_tallas || 0,
+          tipo_talla || "",
+          tipo_producto || "normal",
+          usa_colores || 0,
+          colores || "[]",
+          video,
+        ]
+      );
+
+      res.json({
+        id: result.insertId,
+        nombre,
+        precio,
+        descripcion,
+        imagen: imagenPrincipal,
+        imagenes,
+        categoria_id,
+        marca,
+        stock,
+        sku,
+        tallas,
+        usa_tallas,
+        tipo_talla,
+        tipo_producto: tipo_producto || "normal",
+        usa_colores,
+        colores,
+        video,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json(error);
+    }
   }
-});
-
+);
 app.delete("/productos/:id", async (req, res) => {
   try {
     const { id } = req.params;
