@@ -260,28 +260,17 @@ app.delete("/categorias/:id", async (req, res) => {
 ========================= */
 
 const productosPath = path.join(__dirname, "uploads", "productos");
-const videosPath = path.join(__dirname, "uploads", "videos");
 
 if (!fs.existsSync(productosPath)) {
   fs.mkdirSync(productosPath, { recursive: true });
 }
 
-if (!fs.existsSync(videosPath)) {
-  fs.mkdirSync(videosPath, { recursive: true });
-}
-
 const storageProducto = multer.diskStorage({
   destination: (req, file, cb) => {
-    if (file.fieldname === "video") {
-      cb(null, videosPath);
-    } else {
-      cb(null, productosPath);
-    }
+    cb(null, productosPath); // Solo guardamos las imágenes
   },
   filename: (req, file, cb) => {
-    const nombreArchivo =
-      Date.now() + "-" + file.originalname.replace(/\s+/g, "-");
-
+    const nombreArchivo = Date.now() + "-" + file.originalname.replace(/\s+/g, "-");
     cb(null, nombreArchivo);
   },
 });
@@ -342,11 +331,11 @@ app.get("/productos/:id", async (req, res) => {
   }
 });
 
+
 app.post(
   "/productos",
   uploadProducto.fields([
-    { name: "imagenes", maxCount: 6 },
-    { name: "video", maxCount: 1 },
+    { name: "imagenes", maxCount: 6 }, // Solo permitimos las imágenes
   ]),
   async (req, res) => {
     try {
@@ -366,39 +355,36 @@ app.post(
         colores,
       } = req.body;
 
+      // Validación de campos obligatorios
       if (!nombre || !precio || !descripcion || !categoria_id || !stock) {
         return res.status(400).json({
           message: "Faltan campos obligatorios",
         });
       }
 
+      // Obtener los archivos de imágenes subidos
       const imagenesFiles = req.files?.imagenes || [];
-      const videoFile = req.files?.video ? req.files.video[0] : null;
 
+      // Verificar que se haya subido al menos una imagen
       if (imagenesFiles.length === 0) {
         return res.status(400).json({
           message: "Debes subir mínimo una imagen",
         });
       }
 
+      // Definir las imágenes subidas
       const imagenPrincipal = `uploads/productos/${imagenesFiles[0].filename}`;
-
       const imagenes = imagenesFiles.map(file => {
         return `uploads/productos/${file.filename}`;
       });
-
-      const video = videoFile
-        ? `uploads/videos/${videoFile.filename}`
-        : "";
-
       const [result] = await db.query(
         `INSERT INTO productos 
         (
           nombre, precio, descripcion, imagen, imagenes,
           categoria_id, marca, stock, sku, tallas,
-          usa_tallas, tipo_talla, tipo_producto, usa_colores, colores, video
+          usa_tallas, tipo_talla, tipo_producto, usa_colores, colores
         ) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           nombre,
           precio,
@@ -415,10 +401,10 @@ app.post(
           tipo_producto || "normal",
           usa_colores || 0,
           colores || "[]",
-          video,
         ]
       );
 
+      // Responder con el producto insertado
       res.json({
         id: result.insertId,
         nombre,
@@ -436,14 +422,21 @@ app.post(
         tipo_producto: tipo_producto || "normal",
         usa_colores,
         colores,
-        video,
       });
     } catch (error) {
-      console.error(error);
-      res.status(500).json(error);
+      console.error("ERROR REAL:", error);
+
+      // Responder con el error
+      res.status(500).json({
+        message: error.message,
+        sqlMessage: error.sqlMessage,
+        code: error.code
+      });
     }
   }
 );
+
+
 app.delete("/productos/:id", async (req, res) => {
   try {
     const { id } = req.params;

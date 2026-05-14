@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 10-05-2026 a las 04:24:19
+-- Tiempo de generación: 14-05-2026 a las 01:57:30
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.0.30
 
@@ -139,16 +139,19 @@ CREATE TABLE `productos` (
   `usa_colores` tinyint(4) DEFAULT 1,
   `colores` text DEFAULT NULL,
   `tipo_producto` varchar(30) DEFAULT 'normal',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `video` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `productos`
 --
 
-INSERT INTO `productos` (`id`, `nombre`, `precio`, `imagen`, `categoria_id`, `descripcion`, `marca`, `stock`, `sku`, `tallas`, `imagenes`, `usa_tallas`, `tipo_talla`, `usa_colores`, `colores`, `tipo_producto`, `created_at`) VALUES
-(4, 'Zapatos Deportivos', 300.00, 'uploads/productos/1778174548020-categoria-3.png', 4, 'Lorem, ipsum dolor sit amet consectetur adipisicing elit. Eaque consectetur exercitationem esse asperiores, harum sunt voluptates mollitia error distinctio voluptatum animi deserunt quas aperiam quibusdam saepe neque repudiandae veritatis cupiditate.', 'Adidas', 10, 'noc cual es', '[\"39\",\"38\",\"37\"]', '[\"uploads/productos/1778174548020-categoria-3.png\"]', 1, 'calzado-adulto', 1, '[\"Negro\",\"Azul\"]', 'normal', '2026-05-09 11:36:43'),
-(5, 'Zapatos Deportivos', 300.00, 'uploads/productos/1778257539686-banner-4.png', 4, 'kdsmvkemwrgwrg rwg rweg wreg wrg rg wre g g', 'Adidas', 10, 'noc cual es', '[]', '[\"uploads/productos/1778257539686-banner-4.png\",\"uploads/productos/1778257539727-presonal-shopper.png\",\"uploads/productos/1778257539755-preventa.png\",\"uploads/productos/1778257539786-categoria-3.png\",\"uploads/productos/1778257539804-categoria-2.png\",\"uploads/productos/1778257539820-Logo.png\"]', 1, 'personalizada', 1, '[\"Negro\",\"Azul\",\"Blanco\"]', 'normal', '2026-05-09 11:36:43');
+INSERT INTO `productos` (`id`, `nombre`, `precio`, `imagen`, `categoria_id`, `descripcion`, `marca`, `stock`, `sku`, `tallas`, `imagenes`, `usa_tallas`, `tipo_talla`, `usa_colores`, `colores`, `tipo_producto`, `created_at`, `video`) VALUES
+(4, 'Zapatos Deportivos', 300.00, 'uploads/productos/1778174548020-categoria-3.png', 4, 'Lorem, ipsum dolor sit amet consectetur adipisicing elit. Eaque consectetur exercitationem esse asperiores, harum sunt voluptates mollitia error distinctio voluptatum animi deserunt quas aperiam quibusdam saepe neque repudiandae veritatis cupiditate.', 'Adidas', 10, 'noc cual es', '[\"39\",\"38\",\"37\"]', '[\"uploads/productos/1778174548020-categoria-3.png\"]', 1, 'calzado-adulto', 1, '[\"Negro\",\"Azul\"]', 'normal', '2026-05-09 11:36:43', NULL),
+(5, 'Zapatos Deportivos', 300.00, 'uploads/productos/1778257539686-banner-4.png', 4, 'kdsmvkemwrgwrg rwg rweg wreg wrg rg wre g g', 'Adidas', 10, 'noc cual es', '[]', '[\"uploads/productos/1778257539686-banner-4.png\",\"uploads/productos/1778257539727-presonal-shopper.png\",\"uploads/productos/1778257539755-preventa.png\",\"uploads/productos/1778257539786-categoria-3.png\",\"uploads/productos/1778257539804-categoria-2.png\",\"uploads/productos/1778257539820-Logo.png\"]', 1, 'personalizada', 1, '[\"Negro\",\"Azul\",\"Blanco\"]', 'normal', '2026-05-09 11:36:43', NULL),
+(7, 'Zapatos Deportivos', 300.00, 'uploads/productos/1778523179855-ebanisteria.webp', 4, 'efwefwewefwef', 'Adidas', 8, '', '[]', '[\"uploads/productos/1778523179855-ebanisteria.webp\",\"uploads/productos/1778523179856-salon.webp\",\"uploads/productos/1778523179856-odontologia.webp\",\"uploads/productos/1778523179856-tatuando.webp\"]', 0, '', 0, '[]', 'normal', '2026-05-11 18:12:59', NULL),
+(8, 'Zapatos Deportivos', 300.00, 'uploads/productos/1778523201623-tatuando.webp', 4, 'wefwefwe', 'Adidas', 8, '', '[]', '[\"uploads/productos/1778523201623-tatuando.webp\"]', 0, '', 0, '[]', 'normal', '2026-05-11 18:13:21', NULL);
 
 --
 -- Índices para tablas volcadas
@@ -218,7 +221,7 @@ ALTER TABLE `pedidos`
 -- AUTO_INCREMENT de la tabla `productos`
 --
 ALTER TABLE `productos`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- Restricciones para tablas volcadas

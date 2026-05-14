@@ -30,7 +30,6 @@ let productoEditandoId = null;
 let imagenActualProducto = "";
 let imagenesActualesProducto = "[]";
 let imagenesActualesPreview = [];
-const videoProducto = document.getElementById("videoProducto");
 
 /* =========================
    ADMIN: FLYERS
@@ -890,6 +889,7 @@ if (formProducto) {
   formProducto.addEventListener("submit", async e => {
     e.preventDefault();
 
+    // Verificar que se haya seleccionado al menos una imagen
     if (!productoEditandoId && imagenesSeleccionadas.length === 0) {
       alert("Selecciona mínimo una imagen");
       return;
@@ -897,6 +897,7 @@ if (formProducto) {
 
     const formData = new FormData();
 
+    // Agregar todos los campos del formulario
     formData.append("nombre", nombreProducto.value.trim());
     formData.append("precio", precioProducto.value);
     formData.append("descripcion", descripcionProducto.value.trim());
@@ -912,15 +913,13 @@ if (formProducto) {
     formData.append("colores", JSON.stringify(coloresProducto));
     formData.append("imagenActual", imagenActualProducto || imagenesActualesPreview[0] || "");
     formData.append("imagenesActuales", JSON.stringify(imagenesActualesPreview));
-    formData.append("video", videoProducto.files[0]);
 
+    // Agregar las imágenes seleccionadas al formData
     imagenesSeleccionadas.forEach(imagen => {
       formData.append("imagenes", imagen);
     });
 
-    const video = videoProducto?.files[0];
-    if (video) formData.append("video", video);
-
+    // Determinar la URL y el método HTTP
     const url = productoEditandoId
       ? `${API_URL}/productos/${productoEditandoId}`
       : `${API_URL}/productos`;
@@ -928,6 +927,7 @@ if (formProducto) {
     const method = productoEditandoId ? "PUT" : "POST";
 
     try {
+      // Enviar la solicitud al servidor
       const res = await fetch(url, {
         method,
         body: formData,
@@ -947,7 +947,6 @@ if (formProducto) {
     }
   });
 }
-
 /* MOSTRAR PRODUCTOS ADMIN */
 
 async function cargarProductosAdmin() {
@@ -1197,12 +1196,6 @@ async function cargarDetalleProducto() {
           <img id="imagenPrincipalProducto" src="${API_URL}/${imagenes[0]}" alt="${producto.nombre}">
         </div>
       </div>
-
-      ${producto.video ? `
-        <div class="producto-video">
-          <video controls src="${API_URL}/${producto.video}"></video>
-        </div>
-      ` : ""}
 
       <div class="producto-info-detalle">
         <span class="producto-categoria-tag">${producto.categoria}</span>
