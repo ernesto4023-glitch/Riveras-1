@@ -539,55 +539,6 @@ app.put("/productos/:id", uploadProducto.array("imagenes", 6), async (req, res) 
   }
 });
 /* =========================
-   CONFIGURACIÓN
-========================= */
-
-app.get("/configuracion/tasa-cambio", async (req, res) => {
-  try {
-    const [rows] = await db.query(
-      "SELECT valor FROM configuracion WHERE clave = ?",
-      ["tasa_cambio"]
-    );
-
-    res.json({
-      tasa_cambio: rows.length ? Number(rows[0].valor) : 4000,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json(error);
-  }
-});
-
-app.put("/configuracion/tasa-cambio", async (req, res) => {
-  try {
-    const { tasa_cambio } = req.body;
-
-    if (!tasa_cambio || Number(tasa_cambio) <= 0) {
-      return res.status(400).json({
-        message: "Tasa inválida",
-      });
-    }
-
-    await db.query(
-      `
-      INSERT INTO configuracion (clave, valor)
-      VALUES ('tasa_cambio', ?)
-      ON DUPLICATE KEY UPDATE valor = VALUES(valor)
-      `,
-      [tasa_cambio]
-    );
-
-    res.json({
-      message: "Tasa actualizada",
-      tasa_cambio: Number(tasa_cambio),
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json(error);
-  }
-});
-
-/* =========================
    PEDIDOS
 ========================= */
 

@@ -1,28 +1,19 @@
-const API_URL = 'https://riverashop.net';
+const API_URL = 'https://riverashop.net'; 
 
 let monedaActual = localStorage.getItem("monedaActual") || "COP";
-let tasaCambio = Number(localStorage.getItem("tasaCambioCache")) || 4000;
+let tasaCambio = 1;
 
-async function cargarTasaCambio() {
-  try {
-    const res = await fetch(`${API_URL}/configuracion/tasa-cambio`);
-    const data = await res.json();
+function formatearPrecio(precio) {
+  // Asegúrate de que el precio sea un número válido
+  const precioNum = parseFloat(precio);
 
-    tasaCambio = Number(data.tasa_cambio) || 4000;
-    localStorage.setItem("tasaCambioCache", tasaCambio);
-  } catch (error) {
-    console.error("No se pudo cargar la tasa de cambio", error);
-  }
-}
-
-function formatearPrecio(precioUSD) {
-  const precio = Number(precioUSD);
-
-  if (monedaActual === "USD") {
-    return `$${precio.toFixed(2)} USD`;
+  // Si el precio no es un número, devuelve un valor predeterminado
+  if (isNaN(precioNum)) {
+    return `$0.00`;  // Precio no válido, mostrar 0.00
   }
 
-  return `$${(precio * tasaCambio).toLocaleString()} COP`;
+  // Si es un número válido, usa .toFixed() para mostrar el precio con hasta 3 decimales
+  return `$${precioNum.toFixed(3)}`;  // Muestra el precio con hasta 3 decimales
 }
 
 let categoriaEditandoId = null;
@@ -889,6 +880,13 @@ if (formProducto) {
   formProducto.addEventListener("submit", async e => {
     e.preventDefault();
 
+    const precio = parseFloat(precioProducto.value); // Esto permite cualquier cantidad de decimales
+
+      if (isNaN(precio) || precio <= 0) {
+        alert("Precio no válido");
+        return;
+      }
+
     // Verificar que se haya seleccionado al menos una imagen
     if (!productoEditandoId && imagenesSeleccionadas.length === 0) {
       alert("Selecciona mínimo una imagen");
@@ -963,7 +961,7 @@ async function cargarProductosAdmin() {
             <th><input type="checkbox"></th>
             <th>Producto</th>
             <th>Categoría</th>
-            <th>Precio</th>
+            <th>Precio</th> <!-- Aquí mostramos el precio -->
             <th>Stock</th>
             <th>Vendidos</th>
             <th>Estado</th>
@@ -989,7 +987,8 @@ async function cargarProductosAdmin() {
 
               <td>${producto.categoria || "Sin categoría"}</td>
 
-              <td>${formatearPrecio(producto.precio)}</td>
+              <!-- Usamos la función formatearPrecio para mostrar el precio -->
+              <td>${formatearPrecio(producto.precio)}</td> 
 
               <td class="${Number(producto.stock) <= 5 ? "stock-low" : "stock-ok"}">
                 ${producto.stock || 0}
@@ -1026,8 +1025,65 @@ async function cargarProductosAdmin() {
       </table>
     `;
   } catch (error) {
-    console.error(error);
+    console.error("Error al cargar los productos:", error);
   }
+}
+
+// Función para crear la fila de un producto
+function crearFilaProducto(producto) {
+  const estadoProducto = Number(producto.stock) <= 0 ? "agotado" : "activo";
+  const estadoClase = Number(producto.stock) <= 0 ? "agotado" : "activo";
+  const stockClase = Number(producto.stock) <= 5 ? "stock-low" : "stock-ok";
+
+  return `
+    <tr>
+      <td><input type="checkbox"></td>
+
+      <td>
+        <div class="admin-product-info">
+          <img src="${API_URL}/${producto.imagen}" alt="${producto.nombre}">
+          <div>
+            <h4>${producto.nombre}</h4>
+            <span>SKU: ${producto.sku || "N/A"}</span>
+          </div>
+        </div>
+      </td>
+
+      <td>${producto.categoria || "Sin categoría"}</td>
+
+      <td>${formatearPrecio(producto.precio)}</td>
+
+      <td class="${stockClase}">
+        ${producto.stock || 0}
+      </td>
+
+      <td>0</td>
+
+      <td>
+        <span class="estado-producto ${estadoClase}">
+          ${estadoProducto}
+        </span>
+      </td>
+
+      <td>${new Date().toLocaleDateString()}</td>
+
+      <td>
+        <div class="admin-actions">
+          <button onclick="editarProducto(${producto.id})">
+            <i class="bi bi-pencil"></i>
+          </button>
+
+          <a href="producto.html?id=${producto.id}">
+            <i class="bi bi-eye"></i>
+          </a>
+
+          <button class="delete" onclick="eliminarProducto(${producto.id})">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `;
 }
 
 async function eliminarProducto(id) {
@@ -1942,65 +1998,17 @@ document.getElementById("buscarNovedades")?.addEventListener("input", e => {
 
 cargarNovedades();
 
-/* =========================
-   MONEDA / TASA DE CAMBIO
-========================= */
-
-document.getElementById("btnCOP")?.addEventListener("click", () => {
-  monedaActual = "COP";
-  localStorage.setItem("monedaActual", "COP");
-  location.reload();
-});
-
-document.getElementById("btnUSD")?.addEventListener("click", () => {
-  monedaActual = "USD";
-  localStorage.setItem("monedaActual", "USD");
-  location.reload();
-});
-
-document.getElementById("guardarTasaCambio")?.addEventListener("click", async () => {
-  const input = document.getElementById("tasaCambioInput");
-  const valor = Number(input.value);
-
-  if (!valor || valor <= 0) {
-    alert("Escribe una tasa válida");
-    return;
-  }
-
-  try {
-    const res = await fetch(`${API_URL}/configuracion/tasa-cambio`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        tasa_cambio: valor
-      })
-    });
-
-    if (!res.ok) {
-      throw new Error("Error al guardar tasa");
-    }
-
-    tasaCambio = valor;
-
-    localStorage.setItem("tasaCambioCache", valor);
-    location.reload();
-    alert("Tasa de cambio actualizada");
-  } catch (error) {
-    console.error(error);
-    alert("No se pudo guardar la tasa");
-  }
-});
-
+// INICIAR MONEDA
 async function iniciarMoneda() {
-  await cargarTasaCambio();
+  // Ya no es necesario cargar la tasa de cambio desde el servidor
+  tasaCambio = 1;  // Establecer tasa fija a 1
 
   const inputTasa = document.getElementById("tasaCambioInput");
   if (inputTasa) inputTasa.value = tasaCambio;
 
-  document.getElementById("btnCOP")?.classList.toggle("active", monedaActual === "COP");
-  document.getElementById("btnUSD")?.classList.toggle("active", monedaActual === "USD");
+  // No necesitas más botones de cambio de moneda
+  document.getElementById("btnCOP")?.classList.toggle("active", true);  // Mantener COP siempre activo
+  document.getElementById("btnUSD")?.classList.toggle("active", false); // Desactivar USD
 }
 
 iniciarMoneda();
