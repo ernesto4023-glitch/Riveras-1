@@ -1,0 +1,11 @@
+# Archivos de texto
+*.html text
+*.css text
+*.js text
+
+# Archivos binarios (imágenes)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
