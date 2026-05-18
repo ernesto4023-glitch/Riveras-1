@@ -14,7 +14,8 @@ app.use(express.json());
 
 // Carpetas
 const publicPath = path.join(__dirname, "public");
-const uploadsPath = path.join(__dirname, "uploads");
+const uploadsPath = process.env.UPLOAD_DIR || path.join(__dirname, "uploads");
+app.use("/uploads", express.static(uploadsPath));
 const categoriasPath = path.join(__dirname, "uploads", "categorias");
 
 // Crear carpeta uploads/categorias si no existe
