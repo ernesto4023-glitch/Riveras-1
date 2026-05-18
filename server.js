@@ -25,7 +25,6 @@ if (!fs.existsSync(categoriasPath)) {
 
 // Archivos estáticos
 app.use(express.static(publicPath));
-app.use("/uploads", express.static(uploadsPath));
 
 const db = mysql.createPool({
   host: process.env.DB_HOST,
