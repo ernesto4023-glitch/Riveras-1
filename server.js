@@ -13,10 +13,26 @@ app.use(cors());
 app.use(express.json());
 
 // Carpetas
+
 const publicPath = path.join(__dirname, "public");
 const uploadsPath = process.env.UPLOAD_DIR || path.join(__dirname, "uploads");
-app.use("/uploads", express.static(uploadsPath));
-const categoriasPath = path.join(__dirname, "uploads", "categorias");
+
+const categoriasPath = path.join(uploadsPath, "categorias");
+const flyersPath = path.join(uploadsPath, "flyers");
+const productosPath = path.join(uploadsPath, "productos");
+const comprobantesPath = path.join(uploadsPath, "comprobantes");
+
+[
+  uploadsPath,
+  categoriasPath,
+  flyersPath,
+  productosPath,
+  comprobantesPath
+].forEach(dir => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
 
 // Crear carpeta uploads/categorias si no existe
 if (!fs.existsSync(categoriasPath)) {
@@ -25,6 +41,7 @@ if (!fs.existsSync(categoriasPath)) {
 
 // Archivos estáticos
 app.use(express.static(publicPath));
+app.use("/uploads", express.static(uploadsPath));
 
 const db = mysql.createPool({
   host: process.env.DB_HOST,
@@ -45,8 +62,6 @@ app.get("/admin", (req, res) => {
 /* =========================
    FLYERS
 ========================= */
-
-const flyersPath = path.join(__dirname, "uploads", "flyers");
 
 if (!fs.existsSync(flyersPath)) {
   fs.mkdirSync(flyersPath, { recursive: true });
@@ -259,15 +274,13 @@ app.delete("/categorias/:id", async (req, res) => {
    PRODUCTOS
 ========================= */
 
-const productosPath = path.join(__dirname, "uploads", "productos");
-
 if (!fs.existsSync(productosPath)) {
   fs.mkdirSync(productosPath, { recursive: true });
 }
 
 const storageProducto = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, productosPath); // Solo guardamos las imágenes
+  cb(null, comprobantesPath);
   },
   filename: (req, file, cb) => {
     const nombreArchivo = Date.now() + "-" + file.originalname.replace(/\s+/g, "-");
