@@ -304,15 +304,21 @@
               </div>
 
               <div class="form-row">
-                <div class="form-group">
-                  <label>Stock disponible *</label>
-                  <input type="number" id="stockProducto" placeholder="Ej. 20" required>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Stock para esta variante *</label>
+                    <input type="number" id="stockProducto" placeholder="Ej. 20" min="0">
+                  </div>
+
+                  <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button type="button" id="agregarVarianteProducto" class="btn-guardar-producto">
+                      + Agregar variante
+                    </button>
+                  </div>
                 </div>
 
-                <div class="form-group">
-                  <label>SKU / Código</label>
-                  <input type="text" id="skuProducto" placeholder="Ej. RIV-CHQ-001">
-                </div>
+                <div id="listaVariantesProducto" class="lista-variantes-producto"></div>
               </div>
             </div>
 

@@ -13,7 +13,6 @@ app.use(cors());
 app.use(express.json());
 
 // Carpetas
-
 const publicPath = path.join(__dirname, "public");
 const uploadsPath = process.env.UPLOAD_DIR || path.join(__dirname, "uploads");
 
@@ -280,7 +279,7 @@ if (!fs.existsSync(productosPath)) {
 
 const storageProducto = multer.diskStorage({
   destination: (req, file, cb) => {
-  cb(null, comprobantesPath);
+    cb(null, productosPath);
   },
   filename: (req, file, cb) => {
     const nombreArchivo = Date.now() + "-" + file.originalname.replace(/\s+/g, "-");
@@ -348,7 +347,7 @@ app.get("/productos/:id", async (req, res) => {
 app.post(
   "/productos",
   uploadProducto.fields([
-    { name: "imagenes", maxCount: 6 }, // Solo permitimos las imágenes
+    { name: "imagenes", maxCount: 6 },
   ]),
   async (req, res) => {
     try {
@@ -358,46 +357,38 @@ app.post(
         descripcion,
         categoria_id,
         marca,
-        stock,
-        sku,
-        tallas,
-        usa_tallas,
-        tipo_talla,
-        tipo_producto,
-        usa_colores,
-        colores,
+        variantes,
+        tipo_producto
       } = req.body;
 
-      // Validación de campos obligatorios
-      if (!nombre || !precio || !descripcion || !categoria_id || !stock) {
+      if (!nombre || !precio || !descripcion || !categoria_id || !variantes) {
         return res.status(400).json({
           message: "Faltan campos obligatorios",
+          recibido: req.body
         });
       }
 
-      // Obtener los archivos de imágenes subidos
       const imagenesFiles = req.files?.imagenes || [];
 
-      // Verificar que se haya subido al menos una imagen
       if (imagenesFiles.length === 0) {
         return res.status(400).json({
           message: "Debes subir mínimo una imagen",
         });
       }
 
-      // Definir las imágenes subidas
       const imagenPrincipal = `uploads/productos/${imagenesFiles[0].filename}`;
+
       const imagenes = imagenesFiles.map(file => {
         return `uploads/productos/${file.filename}`;
       });
+
       const [result] = await db.query(
         `INSERT INTO productos 
         (
           nombre, precio, descripcion, imagen, imagenes,
-          categoria_id, marca, stock, sku, tallas,
-          usa_tallas, tipo_talla, tipo_producto, usa_colores, colores
+          categoria_id, marca, variantes, tipo_producto
         ) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           nombre,
           precio,
@@ -406,18 +397,11 @@ app.post(
           JSON.stringify(imagenes),
           categoria_id,
           marca || "",
-          stock,
-          sku || "",
-          tallas || "[]",
-          usa_tallas || 0,
-          tipo_talla || "",
-          tipo_producto || "normal",
-          usa_colores || 0,
-          colores || "[]",
+          variantes,
+          tipo_producto || "normal"
         ]
       );
 
-      // Responder con el producto insertado
       res.json({
         id: result.insertId,
         nombre,
@@ -426,20 +410,14 @@ app.post(
         imagen: imagenPrincipal,
         imagenes,
         categoria_id,
-        marca,
-        stock,
-        sku,
-        tallas,
-        usa_tallas,
-        tipo_talla,
-        tipo_producto: tipo_producto || "normal",
-        usa_colores,
-        colores,
+        marca: marca || "",
+        variantes,
+        tipo_producto: tipo_producto || "normal"
       });
+
     } catch (error) {
       console.error("ERROR REAL:", error);
 
-      // Responder con el error
       res.status(500).json({
         message: error.message,
         sqlMessage: error.sqlMessage,
@@ -486,15 +464,16 @@ app.put("/productos/:id", uploadProducto.array("imagenes", 6), async (req, res) 
       descripcion,
       categoria_id,
       marca,
-      stock,
-      sku,
-      tallas,
-      usa_tallas,
-      tipo_talla,
-      tipo_producto,
-      usa_colores,
-      colores,
+      variantes,
+      tipo_producto
     } = req.body;
+
+    if (!nombre || !precio || !descripcion || !categoria_id || !variantes) {
+      return res.status(400).json({
+        message: "Faltan campos obligatorios",
+        recibido: req.body
+      });
+    }
 
     let imagenPrincipal = req.body.imagenActual || "";
     let imagenes = req.body.imagenesActuales || "[]";
@@ -514,14 +493,8 @@ app.put("/productos/:id", uploadProducto.array("imagenes", 6), async (req, res) 
         imagenes = ?,
         categoria_id = ?,
         marca = ?,
-        stock = ?,
-        sku = ?,
-        tallas = ?,
-        usa_tallas = ?,
-        tipo_talla = ?,
-        tipo_producto = ?,
-        usa_colores = ?,
-        colores = ?
+        variantes = ?,
+        tipo_producto = ?
       WHERE id = ?`,
       [
         nombre,
@@ -531,14 +504,8 @@ app.put("/productos/:id", uploadProducto.array("imagenes", 6), async (req, res) 
         imagenes,
         categoria_id,
         marca || "",
-        stock,
-        sku || "",
-        tallas || "[]",
-        usa_tallas || 0,
-        tipo_talla || "",
+        variantes,
         tipo_producto || "normal",
-        usa_colores || 0,
-        colores || "[]",
         id
       ]
     );
@@ -546,9 +513,15 @@ app.put("/productos/:id", uploadProducto.array("imagenes", 6), async (req, res) 
     res.json({
       message: "Producto actualizado correctamente"
     });
+
   } catch (error) {
-    console.error(error);
-    res.status(500).json(error);
+    console.error("ERROR REAL:", error);
+
+    res.status(500).json({
+      message: error.message,
+      sqlMessage: error.sqlMessage,
+      code: error.code
+    });
   }
 });
 /* =========================
@@ -557,10 +530,10 @@ app.put("/productos/:id", uploadProducto.array("imagenes", 6), async (req, res) 
 
 const storageComprobantes = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/comprobantes");
+    cb(null, comprobantesPath);
   },
   filename: (req, file, cb) => {
-    const nombreArchivo = Date.now() + "-" + file.originalname;
+    const nombreArchivo = Date.now() + "-" + file.originalname.replace(/\s+/g, "-");
     cb(null, nombreArchivo);
   }
 });
@@ -586,7 +559,9 @@ app.post("/pedidos", uploadComprobante.single("comprobante"), async (req, res) =
 
     if (!nombre || !whatsapp || !direccion || !ciudad || !metodo_pago || !productos || !total) {
       return res.status(400).json({
-        message: "Faltan campos obligatorios"
+        message: "Faltan campos obligatorios",
+        recibido: req.body,
+        archivos: req.files
       });
     }
 

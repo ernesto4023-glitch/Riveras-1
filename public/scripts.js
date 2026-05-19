@@ -1,4 +1,8 @@
-const API_URL = 'https://riverashop.net'; 
+const API_URL =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:3000"
+    : "https://riverashop.net";
 
 let monedaActual = localStorage.getItem("monedaActual") || "COP";
 let tasaCambio = 1;
@@ -509,7 +513,8 @@ const descripcionProducto = document.getElementById("descripcionProducto");
 const categoriaProducto = document.getElementById("categoriaProducto");
 const marcaProducto = document.getElementById("marcaProducto");
 const stockProducto = document.getElementById("stockProducto");
-const skuProducto = document.getElementById("skuProducto");
+const agregarVarianteProducto = document.getElementById("agregarVarianteProducto");
+const listaVariantesProducto = document.getElementById("listaVariantesProducto");
 
 const inputTalla = document.getElementById("inputTalla");
 const agregarTalla = document.getElementById("agregarTalla");
@@ -532,6 +537,7 @@ const contenedorProductos = document.getElementById("contenedorProductos");
 let tallasProducto = [];
 let coloresProducto = [];
 let imagenesSeleccionadas = [];
+let variantesProducto = [];
 
 let usaTallasProducto = true;
 let usaColoresProducto = true;
@@ -874,50 +880,113 @@ document.querySelectorAll("[data-tipo-producto]").forEach(btn => {
   });
 });
 
+function mostrarVariantesProducto() {
+  if (!listaVariantesProducto) return;
+
+  if (variantesProducto.length === 0) {
+    listaVariantesProducto.innerHTML = `
+      <p class="mini-text">No hay variantes agregadas todavía.</p>
+    `;
+    return;
+  }
+
+  listaVariantesProducto.innerHTML = variantesProducto.map((variante, index) => `
+    <div class="variante-card">
+      <div>
+        <strong>Variante ${index + 1}</strong>
+        <p><b>Tallas:</b> ${variante.tallas.length ? variante.tallas.join(", ") : "Sin tallas"}</p>
+        <p><b>Colores:</b> ${variante.colores.length ? variante.colores.join(", ") : "Sin colores"}</p>
+        <p><b>Stock:</b> ${variante.stock} unidades</p>
+      </div>
+
+      <button type="button" onclick="eliminarVarianteProducto(${index})">
+        Eliminar
+      </button>
+    </div>
+  `).join("");
+}
+
+function eliminarVarianteProducto(index) {
+  variantesProducto.splice(index, 1);
+  mostrarVariantesProducto();
+}
+
+if (agregarVarianteProducto) {
+  agregarVarianteProducto.addEventListener("click", () => {
+    const stock = parseInt(stockProducto.value) || 0;
+
+    if (usaTallasProducto && tallasProducto.length === 0) {
+      alert("Selecciona mínimo una talla para esta variante");
+      return;
+    }
+
+    if (usaColoresProducto && coloresProducto.length === 0) {
+      alert("Agrega mínimo un color para esta variante");
+      return;
+    }
+
+    if (stock <= 0) {
+      alert("Escribe una cantidad válida para esta variante");
+      return;
+    }
+
+    const nuevaVariante = {
+      tallas: usaTallasProducto ? [...tallasProducto] : [],
+      colores: usaColoresProducto ? [...coloresProducto] : [],
+      stock
+    };
+
+    variantesProducto.push(nuevaVariante);
+
+    stockProducto.value = "";
+    mostrarVariantesProducto();
+  });
+}
+
 /* GUARDAR PRODUCTO */
 
 if (formProducto) {
   formProducto.addEventListener("submit", async e => {
     e.preventDefault();
 
-    const precio = parseFloat(precioProducto.value); // Esto permite cualquier cantidad de decimales
+    const precio = parseFloat(precioProducto.value);
 
-      if (isNaN(precio) || precio <= 0) {
-        alert("Precio no válido");
-        return;
-      }
+    if (isNaN(precio) || precio <= 0) {
+      alert("Precio no válido");
+      return;
+    }
 
-    // Verificar que se haya seleccionado al menos una imagen
     if (!productoEditandoId && imagenesSeleccionadas.length === 0) {
       alert("Selecciona mínimo una imagen");
       return;
     }
 
+    if (variantesProducto.length === 0) {
+      alert("Agrega mínimo una variante antes de guardar el producto");
+      return;
+    }
+
     const formData = new FormData();
 
-    // Agregar todos los campos del formulario
     formData.append("nombre", nombreProducto.value.trim());
-    formData.append("precio", precioProducto.value);
+    formData.append("precio", precio);
     formData.append("descripcion", descripcionProducto.value.trim());
     formData.append("categoria_id", categoriaProducto.value);
     formData.append("marca", marcaProducto.value.trim());
-    formData.append("stock", stockProducto.value);
-    formData.append("sku", skuProducto.value.trim());
-    formData.append("usa_tallas", usaTallasProducto ? "1" : "0");
-    formData.append("tipo_talla", tipoTallaProducto);
-    formData.append("tallas", JSON.stringify(tallasProducto));
+    formData.append("variantes", JSON.stringify(variantesProducto));
     formData.append("tipo_producto", tipoProducto);
-    formData.append("usa_colores", usaColoresProducto ? "1" : "0");
-    formData.append("colores", JSON.stringify(coloresProducto));
     formData.append("imagenActual", imagenActualProducto || imagenesActualesPreview[0] || "");
     formData.append("imagenesActuales", JSON.stringify(imagenesActualesPreview));
 
-    // Agregar las imágenes seleccionadas al formData
     imagenesSeleccionadas.forEach(imagen => {
       formData.append("imagenes", imagen);
     });
 
-    // Determinar la URL y el método HTTP
+    console.log("FORMDATA PRODUCTO:");
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value);
+    }
+
     const url = productoEditandoId
       ? `${API_URL}/productos/${productoEditandoId}`
       : `${API_URL}/productos`;
@@ -925,13 +994,14 @@ if (formProducto) {
     const method = productoEditandoId ? "PUT" : "POST";
 
     try {
-      // Enviar la solicitud al servidor
       const res = await fetch(url, {
         method,
         body: formData,
       });
 
       if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        console.error("ERROR BACKEND:", errorData);
         throw new Error("Error al guardar producto");
       }
 
@@ -945,6 +1015,7 @@ if (formProducto) {
     }
   });
 }
+
 /* MOSTRAR PRODUCTOS ADMIN */
 
 async function cargarProductosAdmin() {
@@ -1109,41 +1180,96 @@ async function eliminarProducto(id) {
 async function editarProducto(id) {
   try {
     const res = await fetch(`${API_URL}/productos/${id}`);
+
+    if (!res.ok) {
+      throw new Error("Error al obtener el producto");
+    }
+
     const producto = await res.json();
 
+    // =========================
+    // Modo edición
+    // =========================
     productoEditandoId = id;
-    imagenActualProducto = producto.imagen;
+
+    // =========================
+    // Imágenes actuales
+    // =========================
+    imagenActualProducto = producto.imagen || "";
     imagenesActualesProducto = producto.imagenes || "[]";
 
-    imagenesActualesPreview = producto.imagenes
-      ? JSON.parse(producto.imagenes)
-      : [producto.imagen];
+    try {
+      imagenesActualesPreview = producto.imagenes
+        ? JSON.parse(producto.imagenes)
+        : producto.imagen
+          ? [producto.imagen]
+          : [];
+    } catch (error) {
+      imagenesActualesPreview = producto.imagen ? [producto.imagen] : [];
+    }
 
     imagenesSeleccionadas = [];
 
+    // =========================
+    // Cargar categorías
+    // =========================
     await cargarCategoriasSelectProducto();
 
-    nombreProducto.value = producto.nombre;
-    precioProducto.value = producto.precio;
-    descripcionProducto.value = producto.descripcion;
-    categoriaProducto.value = producto.categoria_id;
+    // =========================
+    // Datos principales
+    // =========================
+    nombreProducto.value = producto.nombre || "";
+    precioProducto.value = producto.precio || "";
+    descripcionProducto.value = producto.descripcion || "";
+    categoriaProducto.value = producto.categoria_id || "";
     marcaProducto.value = producto.marca || "";
-    stockProducto.value = producto.stock;
-    skuProducto.value = producto.sku || "";
-
-    usaTallasProducto = producto.usa_tallas == 1;
-    usaColoresProducto = producto.usa_colores == 1;
-    tipoTallaProducto = producto.tipo_talla || "";
     tipoProducto = producto.tipo_producto || "normal";
 
-    tallasProducto = producto.tallas ? JSON.parse(producto.tallas) : [];
-    coloresProducto = producto.colores ? JSON.parse(producto.colores) : [];
+    // =========================
+    // Variantes guardadas
+    // =========================
+    try {
+      variantesProducto = producto.variantes
+        ? JSON.parse(producto.variantes)
+        : [];
+    } catch (error) {
+      variantesProducto = [];
+    }
 
+    // =========================
+    // Limpiar selección temporal
+    // =========================
+    tallasProducto = [];
+    coloresProducto = [];
+
+    if (stockProducto) {
+      stockProducto.value = "";
+    }
+
+    // =========================
+    // Restaurar botones tipo producto
+    // =========================
+    document.querySelectorAll("[data-tipo-producto]").forEach(btn => {
+      btn.classList.remove("activo");
+
+      if (btn.dataset.tipoProducto === tipoProducto) {
+        btn.classList.add("activo");
+      }
+    });
+
+    // =========================
+    // Pintar información visual
+    // =========================
     mostrarTallasSeleccionadas();
     mostrarColoresSeleccionados();
+    mostrarVariantesProducto();
     mostrarPreviewImagenes();
 
+    // =========================
+    // Abrir modal
+    // =========================
     modalProducto.classList.add("activo");
+
   } catch (error) {
     console.error(error);
     alert("No se pudo cargar el producto");
