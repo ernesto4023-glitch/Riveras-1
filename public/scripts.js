@@ -890,20 +890,83 @@ function mostrarVariantesProducto() {
     return;
   }
 
-  listaVariantesProducto.innerHTML = variantesProducto.map((variante, index) => `
-    <div class="variante-card">
-      <div>
-        <strong>Variante ${index + 1}</strong>
-        <p><b>Tallas:</b> ${variante.tallas.length ? variante.tallas.join(", ") : "Sin tallas"}</p>
-        <p><b>Colores:</b> ${variante.colores.length ? variante.colores.join(", ") : "Sin colores"}</p>
-        <p><b>Stock:</b> ${variante.stock} unidades</p>
-      </div>
+  listaVariantesProducto.innerHTML = variantesProducto.map((variante, index) => {
+    const colores = variante.colores.length ? variante.colores : ["Sin color"];
+    const tallas = variante.tallas.length ? variante.tallas : ["Sin talla"];
 
-      <button type="button" onclick="eliminarVarianteProducto(${index})">
-        Eliminar
-      </button>
-    </div>
-  `).join("");
+    const filas = colores.map(color => `
+      <tr>
+        <td>${color}</td>
+
+        <td>
+          <div class="tallas-tabla-lista">
+            ${tallas.map(talla => `
+              <span>${talla}</span>
+            `).join("")}
+          </div>
+        </td>
+
+        <td>${variante.stock}</td>
+      </tr>
+    `).join("");
+
+    return `
+      <div class="variante-card">
+        <div class="variante-card-header">
+          <strong>Variante ${index + 1}</strong>
+
+          <button 
+            type="button" 
+            onclick="eliminarVarianteProducto(${index})"
+          >
+            Eliminar
+          </button>
+        </div>
+
+        <div class="tabla-variantes-scroll">
+          <table class="tabla-variantes">
+            <thead>
+              <tr>
+                <th>Color</th>
+                <th>Tallas</th>
+                <th>Cantidad</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${filas}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function reiniciarCamposVariante() {
+  tallasProducto = [];
+  coloresProducto = [];
+  tipoTallaProducto = "";
+
+  if (stockProducto) stockProducto.value = "";
+  if (inputColor) inputColor.value = "";
+  if (inputTalla) inputTalla.value = "";
+  if (opcionesTallas) opcionesTallas.innerHTML = "";
+
+  document.querySelectorAll("[data-tipo-talla]").forEach(btn => {
+    btn.classList.remove("activo");
+  });
+
+  document.querySelectorAll("#opcionesTallas input").forEach(input => {
+    input.checked = false;
+  });
+
+  if (editorTallaPersonalizada) {
+    editorTallaPersonalizada.style.display = "none";
+  }
+
+  mostrarTallasSeleccionadas();
+  mostrarColoresSeleccionados();
 }
 
 function eliminarVarianteProducto(index) {
@@ -938,8 +1001,8 @@ if (agregarVarianteProducto) {
 
     variantesProducto.push(nuevaVariante);
 
-    stockProducto.value = "";
     mostrarVariantesProducto();
+    reiniciarCamposVariante();
   });
 }
 
@@ -1328,6 +1391,7 @@ cargarProductosIndex();
 let cantidadDetalle = 1;
 let tallaSeleccionadaDetalle = "";
 let colorSeleccionadoDetalle = "";
+let variantesDetalle = [];
 
 async function cargarDetalleProducto() {
   const contenedor = document.getElementById("productoDetalle");
@@ -1350,13 +1414,21 @@ async function cargarDetalleProducto() {
       ? JSON.parse(producto.imagenes)
       : [producto.imagen];
 
-    const tallas = producto.tallas
-      ? JSON.parse(producto.tallas)
-      : [];
+    let variantes = [];
 
-    const colores = producto.colores
-      ? JSON.parse(producto.colores)
-      : [];
+    try {
+      variantes = producto.variantes ? JSON.parse(producto.variantes) : [];
+    } catch (error) {
+      variantes = [];
+    }
+
+    variantesDetalle = variantes.filter(variante => Number(variante.stock) > 0);
+
+    const coloresDisponibles = [
+      ...new Set(
+        variantesDetalle.flatMap(variante => variante.colores || [])
+      )
+    ];
 
     cantidadDetalle = 1;
     tallaSeleccionadaDetalle = "";
@@ -1395,45 +1467,29 @@ async function cargarDetalleProducto() {
         </p>
 
         <hr>
+      ${coloresDisponibles.length > 0 ? `
+        <div class="producto-opciones">
+          <h4>Color</h4>
 
-        ${producto.usa_tallas == 1 && tallas.length > 0 ? `
-          <div class="producto-opciones">
-            <h4>Talla</h4>
-
-            <div class="producto-tallas-detalle">
-              ${tallas.map(talla => `
-                <button 
-                  type="button"
-                  class="talla-detalle-btn"
-                  data-talla="${talla}"
-                  onclick="seleccionarTallaDetalle(this)"
-                >
-                  ${talla}
-                </button>
-              `).join("")}
-            </div>
+          <div class="producto-colores-detalle">
+            ${coloresDisponibles.map(color => `
+              <button 
+                type="button"
+                class="color-detalle-btn"
+                data-color="${color}"
+                onclick="seleccionarColorDetalle(this)"
+              >
+                ${color}
+              </button>
+            `).join("")}
           </div>
-        ` : ""}
+        </div>
 
-        ${producto.usa_colores == 1 && colores.length > 0 ? `
-          <div class="producto-opciones">
-            <h4>Color</h4>
-
-            <div class="producto-colores-detalle">
-              ${colores.map(color => `
-                <button 
-                  type="button"
-                  class="color-detalle-btn"
-                  data-color="${color}"
-                  onclick="seleccionarColorDetalle(this)"
-                >
-                  ${color}
-                </button>
-              `).join("")}
-            </div>
-          </div>
-        ` : ""}
-
+        <div class="producto-opciones" id="bloqueTallasDetalle" style="display: none;">
+          <h4>Talla</h4>
+          <div class="producto-tallas-detalle" id="tallasDetallePorColor"></div>
+        </div>
+      ` : ""}
         <div class="producto-cantidad">
           <h4>Cantidad</h4>
 
@@ -1473,7 +1529,45 @@ function seleccionarColorDetalle(boton) {
   });
 
   boton.classList.add("activo");
+
   colorSeleccionadoDetalle = boton.dataset.color;
+  tallaSeleccionadaDetalle = "";
+
+  const bloqueTallas = document.getElementById("bloqueTallasDetalle");
+  const contenedorTallas = document.getElementById("tallasDetallePorColor");
+
+  if (!bloqueTallas || !contenedorTallas) return;
+
+  const tallasDisponibles = [
+    ...new Set(
+      variantesDetalle
+        .filter(variante =>
+          Number(variante.stock) > 0 &&
+          Array.isArray(variante.colores) &&
+          variante.colores.includes(colorSeleccionadoDetalle)
+        )
+        .flatMap(variante => variante.tallas || [])
+    )
+  ];
+
+  if (tallasDisponibles.length === 0) {
+    bloqueTallas.style.display = "none";
+    contenedorTallas.innerHTML = "";
+    return;
+  }
+
+  bloqueTallas.style.display = "block";
+
+  contenedorTallas.innerHTML = tallasDisponibles.map(talla => `
+    <button 
+      type="button"
+      class="talla-detalle-btn"
+      data-talla="${talla}"
+      onclick="seleccionarTallaDetalle(this)"
+    >
+      ${talla}
+    </button>
+  `).join("");
 }
 
 function cambiarImagenProducto(src, elemento) {
@@ -1768,6 +1862,23 @@ async function agregarProductoListadoAlCarrito(id) {
     const res = await fetch(`${API_URL}/productos/${id}`);
     const producto = await res.json();
 
+    let variantes = [];
+
+    try {
+      variantes = producto.variantes ? JSON.parse(producto.variantes) : [];
+    } catch (error) {
+      variantes = [];
+    }
+
+    const variantesDisponibles = variantes.filter(variante => Number(variante.stock) > 0);
+
+    // Si tiene variantes, debe ir al detalle para escoger color y talla
+    if (variantesDisponibles.length > 0) {
+      window.location.href = `producto.html?id=${producto.id}`;
+      return;
+    }
+
+    // Si no tiene variantes, sí se puede agregar directo
     carritoProductos.push({
       id: Date.now(),
       producto_id: producto.id,
@@ -1781,6 +1892,7 @@ async function agregarProductoListadoAlCarrito(id) {
 
     guardarCarrito();
     pintarCarritoModal();
+
   } catch (error) {
     console.error(error);
     alert("No se pudo agregar el producto");
@@ -1797,6 +1909,16 @@ function agregarProductoDetalleAlCarrito() {
 
   if (!nombre || !precio || !imagen) {
     alert("No se pudo agregar el producto");
+    return;
+  }
+
+  if (variantesDetalle.length > 0 && !colorSeleccionadoDetalle) {
+    alert("Selecciona un color");
+    return;
+  }
+
+  if (variantesDetalle.length > 0 && !tallaSeleccionadaDetalle) {
+    alert("Selecciona una talla");
     return;
   }
 
@@ -2274,8 +2396,11 @@ if (contadorPendientes) {
               <td>$${Number(pedido.total).toLocaleString()} ${pedido.moneda}</td>
 
               <td>
-                <span class="estado-producto ${pedido.estado === "verificado" ? "activo" : "agotado"}">
-                  ${pedido.estado}
+                <span 
+                  class="estado-pedido ${pedido.estado === "Entregado" ? "entregado" : "clickeable"}"
+                  ${pedido.estado === "Entregado" ? "" : `onclick="cambiarEstadoPedido(${pedido.id}, '${pedido.estado || "Activo"}')"`} 
+                >
+                  ${pedido.estado || "Activo"}
                 </span>
               </td>
 
@@ -2334,6 +2459,74 @@ async function verificarPedido(id, whatsapp, nombre) {
   } catch (error) {
     console.error(error);
     alert("No se pudo verificar el pedido");
+  }
+}
+
+function obtenerSiguienteEstado(estadoActual) {
+  const estados = ["Activo", "Revisado", "En camino", "Entregado"];
+
+  const estadoNormalizado = estadoActual || "Activo";
+  const indexActual = estados.indexOf(estadoNormalizado);
+
+  if (indexActual === -1) return "Activo";
+  if (indexActual >= estados.length - 1) return null;
+
+  return estados[indexActual + 1];
+}
+
+async function cambiarEstadoPedido(id, estadoActual) {
+  const siguienteEstado = obtenerSiguienteEstado(estadoActual);
+
+  if (!siguienteEstado) {
+    return;
+  }
+
+  const confirmar = await Swal.fire({
+    title: "¿Cambiar estado?",
+    text: `El pedido pasará de "${estadoActual}" a "${siguienteEstado}".`,
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Sí, cambiar",
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#e0be32",
+    cancelButtonColor: "#333"
+  });
+
+  if (!confirmar.isConfirmed) return;
+
+  try {
+    const res = await fetch(`${API_URL}/pedidos/${id}/estado`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        estado: siguienteEstado
+      })
+    });
+
+    if (!res.ok) {
+      throw new Error("Error al actualizar estado");
+    }
+
+    await cargarPedidosAdmin();
+
+    Swal.fire({
+      title: "Estado actualizado",
+      text: `El pedido ahora está en "${siguienteEstado}".`,
+      icon: "success",
+      confirmButtonColor: "#e0be32"
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    Swal.fire({
+      title: "Error",
+      text: "No se pudo actualizar el estado del pedido.",
+      icon: "error",
+      confirmButtonColor: "#e0be32"
+    });
   }
 }
 
