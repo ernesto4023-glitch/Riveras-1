@@ -543,6 +543,32 @@ ADMIN CSS REORGANIZADO
 .admin-actions button { width:38px; height:38px; border-radius:8px; background:transparent; border:1px solid rgba(212,175,55,.45); color:#D4AF37; cursor:pointer; }
 .admin-actions .delete { border-color: rgba(255,0,0,.35); color:#ff3333; }
 
+.estado-pedido {
+  display: inline-block;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+  background: rgba(224, 190, 50, 0.12);
+  color: #e0be32;
+  border: 1px solid rgba(224, 190, 50, 0.35);
+}
+
+.estado-pedido.clickeable {
+  cursor: pointer;
+}
+
+.estado-pedido.clickeable:hover {
+  background: #e0be32;
+  color: #000;
+}
+
+.estado-pedido.entregado {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.35);
+  cursor: not-allowed;
+}
 /* =========================
    FORM PRODUCTOS / COMBINACIONES
 ========================= */

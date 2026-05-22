@@ -617,17 +617,27 @@ app.get("/pedidos", async (req, res) => {
   }
 });
 
-app.put("/pedidos/:id/verificar", async (req, res) => {
+app.put("/pedidos/:id/estado", async (req, res) => {
   try {
     const { id } = req.params;
+    const { estado } = req.body;
+
+    const estadosPermitidos = ["Activo", "Revisado", "En camino", "Entregado"];
+
+    if (!estadosPermitidos.includes(estado)) {
+      return res.status(400).json({
+        message: "Estado no válido"
+      });
+    }
 
     await db.query(
       "UPDATE pedidos SET estado = ? WHERE id = ?",
-      ["verificado", id]
+      [estado, id]
     );
 
     res.json({
-      message: "Pedido verificado correctamente"
+      message: "Estado actualizado correctamente",
+      estado
     });
 
   } catch (error) {
@@ -635,7 +645,6 @@ app.put("/pedidos/:id/verificar", async (req, res) => {
     res.status(500).json(error);
   }
 });
-
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

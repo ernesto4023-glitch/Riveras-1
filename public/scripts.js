@@ -1006,6 +1006,43 @@ if (agregarVarianteProducto) {
   });
 }
 
+function obtenerVariantesParaGuardar() {
+  const stock = parseInt(stockProducto.value) || 0;
+
+  const sinTallas = !usaTallasProducto;
+  const sinColores = !usaColoresProducto;
+
+  // Caso: producto sin tallas y sin colores
+  if (sinTallas && sinColores) {
+    if (stock <= 0) {
+      return {
+        error: "Escribe una cantidad válida para el stock del producto."
+      };
+    }
+
+    return {
+      variantes: [
+        {
+          tallas: [],
+          colores: [],
+          stock
+        }
+      ]
+    };
+  }
+
+  // Caso: producto con tallas o colores
+  if (variantesProducto.length === 0) {
+    return {
+      error: "Agrega mínimo una variante antes de guardar el producto."
+    };
+  }
+
+  return {
+    variantes: variantesProducto
+  };
+}
+
 /* GUARDAR PRODUCTO */
 
 if (formProducto) {
@@ -1024,10 +1061,14 @@ if (formProducto) {
       return;
     }
 
-    if (variantesProducto.length === 0) {
-      alert("Agrega mínimo una variante antes de guardar el producto");
+    const resultadoVariantes = obtenerVariantesParaGuardar();
+
+    if (resultadoVariantes.error) {
+      alert(resultadoVariantes.error);
       return;
     }
+
+    const variantesFinales = resultadoVariantes.variantes;
 
     const formData = new FormData();
 
@@ -1036,7 +1077,7 @@ if (formProducto) {
     formData.append("descripcion", descripcionProducto.value.trim());
     formData.append("categoria_id", categoriaProducto.value);
     formData.append("marca", marcaProducto.value.trim());
-    formData.append("variantes", JSON.stringify(variantesProducto));
+    formData.append("variantes", JSON.stringify(variantesFinales));
     formData.append("tipo_producto", tipoProducto);
     formData.append("imagenActual", imagenActualProducto || imagenesActualesPreview[0] || "");
     formData.append("imagenesActuales", JSON.stringify(imagenesActualesPreview));
@@ -1131,10 +1172,15 @@ async function cargarProductosAdmin() {
               <td>0</td>
 
               <td>
-                <span class="estado-producto ${Number(producto.stock) <= 0 ? "agotado" : "activo"}">
-                  ${Number(producto.stock) <= 0 ? "Agotado" : "Activo"}
-                </span>
-              </td>
+  <span 
+    class="estado-pedido ${normalizarEstadoPedido(pedido.estado) === "Entregado" ? "entregado" : "clickeable"}"
+    ${normalizarEstadoPedido(pedido.estado) === "Entregado"
+      ? ""
+      : `onclick="cambiarEstadoPedido(${pedido.id}, '${normalizarEstadoPedido(pedido.estado)}')"`} 
+  >
+    ${normalizarEstadoPedido(pedido.estado)}
+  </span>
+</td>
 
               <td>${new Date().toLocaleDateString()}</td>
 
@@ -2439,33 +2485,16 @@ if (contadorPendientes) {
   }
 }
 
-async function verificarPedido(id, whatsapp, nombre) {
-  try {
-    const res = await fetch(`${API_URL}/pedidos/${id}/verificar`, {
-      method: "PUT"
-    });
-
-    if (!res.ok) {
-      throw new Error("Error al verificar pedido");
-    }
-
-    await cargarPedidosAdmin();
-
-    const numero = whatsapp.replace(/\D/g, "");
-    const mensaje = `Hola ${nombre}, tu pedido #${id} fue verificado correctamente. Pronto coordinaremos el envío.`;
-
-    window.open(`https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`, "_blank");
-
-  } catch (error) {
-    console.error(error);
-    alert("No se pudo verificar el pedido");
-  }
+function normalizarEstadoPedido(estado) {
+  if (!estado || estado === "pendiente") return "Activo";
+  if (estado === "verificado") return "Revisado";
+  return estado;
 }
 
 function obtenerSiguienteEstado(estadoActual) {
   const estados = ["Activo", "Revisado", "En camino", "Entregado"];
 
-  const estadoNormalizado = estadoActual || "Activo";
+  const estadoNormalizado = normalizarEstadoPedido(estadoActual);
   const indexActual = estados.indexOf(estadoNormalizado);
 
   if (indexActual === -1) return "Activo";
@@ -2475,15 +2504,14 @@ function obtenerSiguienteEstado(estadoActual) {
 }
 
 async function cambiarEstadoPedido(id, estadoActual) {
-  const siguienteEstado = obtenerSiguienteEstado(estadoActual);
+  const estadoNormalizado = normalizarEstadoPedido(estadoActual);
+  const siguienteEstado = obtenerSiguienteEstado(estadoNormalizado);
 
-  if (!siguienteEstado) {
-    return;
-  }
+  if (!siguienteEstado) return;
 
   const confirmar = await Swal.fire({
     title: "¿Cambiar estado?",
-    text: `El pedido pasará de "${estadoActual}" a "${siguienteEstado}".`,
+    text: `El pedido pasará de "${estadoNormalizado}" a "${siguienteEstado}".`,
     icon: "question",
     showCancelButton: true,
     confirmButtonText: "Sí, cambiar",
