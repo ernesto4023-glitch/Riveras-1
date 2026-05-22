@@ -2316,6 +2316,16 @@ const modalCheckout = document.getElementById("modalCheckout");
 const cerrarCheckout = document.getElementById("cerrarCheckout");
 const formCheckout = document.getElementById("formCheckout");
 
+const checkoutNombre = document.getElementById("checkoutNombre");
+const checkoutWhatsapp = document.getElementById("checkoutWhatsapp");
+const checkoutCorreo = document.getElementById("checkoutCorreo");
+const checkoutDireccion = document.getElementById("checkoutDireccion");
+const checkoutCiudad = document.getElementById("checkoutCiudad");
+const checkoutMetodoPago = document.getElementById("checkoutMetodoPago");
+const checkoutNotas = document.getElementById("checkoutNotas");
+const checkoutComprobante = document.getElementById("checkoutComprobante");
+const infoMetodoPago = document.getElementById("infoMetodoPago");
+
 document.addEventListener("click", e => {
   const btnCheckout = e.target.closest(".btn-finalizar-compra");
 
@@ -2325,8 +2335,52 @@ document.addEventListener("click", e => {
 });
 
 cerrarCheckout?.addEventListener("click", () => {
-  modalCheckout.classList.remove("activo");
+  modalCheckout?.classList.remove("activo");
 });
+
+/* =========================
+   MÉTODO DE PAGO
+========================= */
+
+document.querySelectorAll(".metodo-pago-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const metodo = btn.dataset.metodoPago;
+
+    document.querySelectorAll(".metodo-pago-btn").forEach(b => {
+      b.classList.remove("activo");
+    });
+
+    btn.classList.add("activo");
+
+    if (checkoutMetodoPago) {
+      checkoutMetodoPago.value = metodo;
+    }
+
+    if (infoMetodoPago) {
+      if (metodo === "Nequi") {
+        infoMetodoPago.innerHTML = `
+          <strong>Pago por Nequi</strong><br>
+          Número: 322 334 9682<br>
+          Titular: Christian Alejandro Rivera Ortiz<br>
+          Luego de pagar, sube el comprobante.
+        `;
+      }
+
+      if (metodo === "Bancolombia") {
+        infoMetodoPago.innerHTML = `
+          <strong>Pago por Bancolombia</strong><br>
+          Cuenta de ahorros: 59726688871<br>
+          Titular: Christian Alejandro Rivera Ortiz<br>
+          Luego de pagar, sube el comprobante.
+        `;
+      }
+    }
+  });
+});
+
+/* =========================
+   ENVIAR PEDIDO
+========================= */
 
 formCheckout?.addEventListener("submit", async e => {
   e.preventDefault();
@@ -2336,24 +2390,75 @@ formCheckout?.addEventListener("submit", async e => {
     return;
   }
 
+  if (
+    !checkoutNombre ||
+    !checkoutWhatsapp ||
+    !checkoutDireccion ||
+    !checkoutCiudad ||
+    !checkoutMetodoPago
+  ) {
+    alert("Faltan campos del formulario de checkout en el HTML.");
+    console.error("Faltan elementos del checkout:", {
+      checkoutNombre,
+      checkoutWhatsapp,
+      checkoutDireccion,
+      checkoutCiudad,
+      checkoutMetodoPago
+    });
+    return;
+  }
+
+  const nombre = checkoutNombre.value.trim();
+  const whatsapp = checkoutWhatsapp.value.trim();
+  const correo = checkoutCorreo ? checkoutCorreo.value.trim() : "";
+  const direccion = checkoutDireccion.value.trim();
+  const ciudad = checkoutCiudad.value.trim();
+  const metodoPago = checkoutMetodoPago.value;
+  const notas = checkoutNotas ? checkoutNotas.value.trim() : "";
+
+  if (!nombre) {
+    alert("Escribe tu nombre completo");
+    return;
+  }
+
+  if (!whatsapp) {
+    alert("Escribe tu WhatsApp");
+    return;
+  }
+
+  if (!direccion) {
+    alert("Escribe tu dirección");
+    return;
+  }
+
+  if (!ciudad) {
+    alert("Escribe tu ciudad");
+    return;
+  }
+
+  if (!metodoPago) {
+    alert("Selecciona un método de pago");
+    return;
+  }
+
   const totalPedido = carritoProductos.reduce((total, producto) => {
     return total + Number(producto.precio) * Number(producto.cantidad);
   }, 0);
 
   const formData = new FormData();
 
-  formData.append("nombre", document.getElementById("checkoutNombre").value.trim());
-  formData.append("whatsapp", document.getElementById("checkoutWhatsapp").value.trim());
-  formData.append("correo", document.getElementById("checkoutCorreo").value.trim());
-  formData.append("direccion", document.getElementById("checkoutDireccion").value.trim());
-  formData.append("ciudad", document.getElementById("checkoutCiudad").value.trim());
-  formData.append("metodo_pago", document.getElementById("checkoutMetodoPago").value);
-  formData.append("notas", document.getElementById("checkoutNotas").value.trim());
+  formData.append("nombre", nombre);
+  formData.append("whatsapp", whatsapp);
+  formData.append("correo", correo);
+  formData.append("direccion", direccion);
+  formData.append("ciudad", ciudad);
+  formData.append("metodo_pago", metodoPago);
+  formData.append("notas", notas);
   formData.append("productos", JSON.stringify(carritoProductos));
   formData.append("total", totalPedido);
   formData.append("moneda", "USD");
 
-  const comprobante = document.getElementById("checkoutComprobante").files[0];
+  const comprobante = checkoutComprobante?.files?.[0];
 
   if (comprobante) {
     formData.append("comprobante", comprobante);
@@ -2366,6 +2471,8 @@ formCheckout?.addEventListener("submit", async e => {
     });
 
     if (!res.ok) {
+      const errorData = await res.json().catch(() => null);
+      console.error("ERROR PEDIDO:", errorData);
       throw new Error("Error al crear pedido");
     }
 
@@ -2376,7 +2483,16 @@ formCheckout?.addEventListener("submit", async e => {
     pintarCarritoModal();
 
     formCheckout.reset();
-    modalCheckout.classList.remove("activo");
+
+    document.querySelectorAll(".metodo-pago-btn").forEach(b => {
+      b.classList.remove("activo");
+    });
+
+    if (infoMetodoPago) {
+      infoMetodoPago.innerHTML = "Selecciona un método de pago para ver la información.";
+    }
+
+    modalCheckout?.classList.remove("activo");
     document.getElementById("modalCarrito")?.classList.remove("activo");
 
   } catch (error) {
