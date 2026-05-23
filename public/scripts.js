@@ -6,6 +6,8 @@ const API_URL =
 
 let monedaActual = localStorage.getItem("monedaActual") || "COP";
 let tasaCambio = 1;
+let imagenesPreviewProducto = [];
+let imagenArrastrandoIndex = null;
 
 function formatearPrecio(precio) {
   // Asegúrate de que el precio sea un número válido
@@ -568,7 +570,6 @@ if (cerrarModalProducto) {
 if (cancelarProducto) {
   cancelarProducto.addEventListener("click", cerrarModalProductoAdmin);
 }
-
 function cerrarModalProductoAdmin() {
   if (!modalProducto || !formProducto) return;
 
@@ -576,17 +577,23 @@ function cerrarModalProductoAdmin() {
   formProducto.reset();
 
   productoEditandoId = null;
+
   imagenActualProducto = "";
   imagenesActualesProducto = "[]";
   imagenesActualesPreview = [];
+  imagenesSeleccionadas = [];
+  imagenesPreviewProducto = [];
 
   tallasProducto = [];
   coloresProducto = [];
-  imagenesSeleccionadas = [];
+  variantesProducto = [];
+
   usaTallasProducto = true;
   usaColoresProducto = true;
   tipoTallaProducto = "";
   tipoProducto = "normal";
+
+  if (stockProducto) stockProducto.value = "";
 
   if (bloqueTallasProducto) bloqueTallasProducto.style.display = "block";
   if (bloqueColoresProducto) bloqueColoresProducto.style.display = "block";
@@ -603,6 +610,7 @@ function cerrarModalProductoAdmin() {
 
   mostrarTallasSeleccionadas();
   mostrarColoresSeleccionados();
+  mostrarVariantesProducto();
   mostrarPreviewImagenes();
 }
 
@@ -787,33 +795,35 @@ function eliminarColorProducto(color) {
 /* IMÁGENES */
 
 if (imagenesProducto) {
-  imagenesProducto?.addEventListener("change", e => {
-  const archivos = Array.from(e.target.files);
+  imagenesProducto.addEventListener("change", e => {
+    const archivos = Array.from(e.target.files || []);
 
-  const totalActual = imagenesActualesPreview.length + imagenesSeleccionadas.length;
-  const espacioDisponible = 6 - totalActual;
+    if (archivos.length === 0) return;
 
-  if (espacioDisponible <= 0) {
-    alert("Solo puedes subir máximo 6 imágenes");
+    const totalActual = imagenesActualesPreview.length + imagenesSeleccionadas.length;
+    const espacioDisponible = 6 - totalActual;
+
+    if (espacioDisponible <= 0) {
+      alert("Solo puedes subir máximo 6 imágenes");
+      imagenesProducto.value = "";
+      return;
+    }
+
+    const archivosPermitidos = archivos.slice(0, espacioDisponible);
+
+    imagenesSeleccionadas = [
+      ...imagenesSeleccionadas,
+      ...archivosPermitidos
+    ];
+
+    if (archivos.length > espacioDisponible) {
+      alert(`Solo se agregaron ${espacioDisponible} imágenes. El máximo permitido es 6.`);
+    }
+
     imagenesProducto.value = "";
-    return;
-  }
 
-  const archivosPermitidos = archivos.slice(0, espacioDisponible);
-
-  imagenesSeleccionadas = [
-    ...imagenesSeleccionadas,
-    ...archivosPermitidos
-  ];
-
-  if (archivos.length > espacioDisponible) {
-    alert(`Solo se agregaron ${espacioDisponible} imágenes. El máximo permitido es 6.`);
-  }
-
-  imagenesProducto.value = "";
-
-  mostrarPreviewImagenes();
-});
+    mostrarPreviewImagenes();
+  });
 }
 
 function obtenerUrlImagen(ruta) {
@@ -851,18 +861,36 @@ function mostrarPreviewImagenes() {
 
   previewGaleria.innerHTML = "";
 
-  const totalImagenes = imagenesActualesPreview.length + imagenesSeleccionadas.length;
+  const imagenesPreview = [
+    ...imagenesActualesPreview.map(imagen => ({
+      tipo: "actual",
+      valor: imagen
+    })),
+    ...imagenesSeleccionadas.map(imagen => ({
+      tipo: "nueva",
+      valor: imagen
+    }))
+  ];
 
   if (contadorImagenes) {
-    contadorImagenes.textContent = `${totalImagenes}/6 imágenes`;
+    contadorImagenes.textContent = `${imagenesPreview.length}/6 imágenes`;
   }
 
-  // Imágenes que ya estaban guardadas cuando editas producto
-  imagenesActualesPreview.forEach((imagen, index) => {
+  imagenesPreview.forEach((imagen, index) => {
     const item = document.createElement("div");
-    item.classList.add("preview-item");
 
-    item.style.backgroundImage = `url('${obtenerUrlImagen(imagen)}')`;
+    item.classList.add("preview-item");
+    item.setAttribute("draggable", "true");
+    item.dataset.index = index;
+
+    if (imagen.tipo === "actual") {
+      item.style.backgroundImage = `url('${obtenerUrlImagen(imagen.valor)}')`;
+    }
+
+    if (imagen.tipo === "nueva") {
+      const urlTemporal = URL.createObjectURL(imagen.valor);
+      item.style.backgroundImage = `url('${urlTemporal}')`;
+    }
 
     item.innerHTML = `
       <span>${index + 1}</span>
@@ -870,42 +898,91 @@ function mostrarPreviewImagenes() {
       <button 
         type="button" 
         class="btn-eliminar-preview"
-        onclick="eliminarImagenActualProducto(${index})"
+        onclick="eliminarImagenPreviewProducto(${index})"
       >
         ×
       </button>
     `;
 
+    item.addEventListener("dragstart", e => {
+      e.dataTransfer.setData("index", index);
+      item.classList.add("arrastrando");
+    });
+
+    item.addEventListener("dragend", () => {
+      item.classList.remove("arrastrando");
+    });
+
+    item.addEventListener("dragover", e => {
+      e.preventDefault();
+      item.classList.add("sobre-preview");
+    });
+
+    item.addEventListener("dragleave", () => {
+      item.classList.remove("sobre-preview");
+    });
+
+    item.addEventListener("drop", e => {
+      e.preventDefault();
+
+      item.classList.remove("sobre-preview");
+
+      const indexOrigen = Number(e.dataTransfer.getData("index"));
+      const indexDestino = Number(item.dataset.index);
+
+      if (indexOrigen === indexDestino) return;
+
+      const imagenMovida = imagenesPreview.splice(indexOrigen, 1)[0];
+      imagenesPreview.splice(indexDestino, 0, imagenMovida);
+
+      imagenesActualesPreview = imagenesPreview
+        .filter(img => img.tipo === "actual")
+        .map(img => img.valor);
+
+      imagenesSeleccionadas = imagenesPreview
+        .filter(img => img.tipo === "nueva")
+        .map(img => img.valor);
+
+      imagenActualProducto = imagenesActualesPreview[0] || "";
+      imagenesActualesProducto = JSON.stringify(imagenesActualesPreview);
+
+      mostrarPreviewImagenes();
+    });
+
     previewGaleria.appendChild(item);
   });
+}
 
-  // Imágenes nuevas antes de subir
-  imagenesSeleccionadas.forEach((archivo, index) => {
-    const reader = new FileReader();
+function eliminarImagenPreviewProducto(index) {
+  const imagenesPreview = [
+    ...imagenesActualesPreview.map(imagen => ({
+      tipo: "actual",
+      valor: imagen
+    })),
+    ...imagenesSeleccionadas.map(imagen => ({
+      tipo: "nueva",
+      valor: imagen
+    }))
+  ];
 
-    reader.onload = e => {
-      const item = document.createElement("div");
-      item.classList.add("preview-item");
+  imagenesPreview.splice(index, 1);
 
-      item.style.backgroundImage = `url('${e.target.result}')`;
+  imagenesActualesPreview = imagenesPreview
+    .filter(img => img.tipo === "actual")
+    .map(img => img.valor);
 
-      item.innerHTML = `
-        <span>${imagenesActualesPreview.length + index + 1}</span>
+  imagenesSeleccionadas = imagenesPreview
+    .filter(img => img.tipo === "nueva")
+    .map(img => img.valor);
 
-        <button 
-          type="button" 
-          class="btn-eliminar-preview"
-          onclick="eliminarImagenNuevaProducto(${index})"
-        >
-          ×
-        </button>
-      `;
+  imagenActualProducto = imagenesActualesPreview[0] || "";
+  imagenesActualesProducto = JSON.stringify(imagenesActualesPreview);
 
-      previewGaleria.appendChild(item);
-    };
+  if (imagenesProducto) {
+    imagenesProducto.value = "";
+  }
 
-    reader.readAsDataURL(archivo);
-  });
+  mostrarPreviewImagenes();
 }
 
 function eliminarImagenNuevaProducto(index) {
@@ -1121,6 +1198,18 @@ function obtenerVariantesParaGuardar() {
   };
 }
 
+function obtenerTotalImagenesProducto() {
+  const imagenesActuales = Array.isArray(imagenesActualesPreview)
+    ? imagenesActualesPreview.length
+    : 0;
+
+  const imagenesNuevas = Array.isArray(imagenesSeleccionadas)
+    ? imagenesSeleccionadas.filter(imagen => imagen instanceof File || imagen instanceof Blob).length
+    : 0;
+
+  return imagenesActuales + imagenesNuevas;
+}
+
 /* GUARDAR PRODUCTO */
 
 if (formProducto) {
@@ -1134,7 +1223,10 @@ if (formProducto) {
       return;
     }
 
-    if (!productoEditandoId && imagenesSeleccionadas.length === 0) {
+    const totalImagenesProducto =
+      imagenesActualesPreview.length + imagenesSeleccionadas.length;
+
+    if (totalImagenesProducto === 0) {
       alert("Selecciona mínimo una imagen");
       return;
     }
@@ -1157,17 +1249,13 @@ if (formProducto) {
     formData.append("marca", marcaProducto.value.trim());
     formData.append("variantes", JSON.stringify(variantesFinales));
     formData.append("tipo_producto", tipoProducto);
+
     formData.append("imagenActual", imagenActualProducto || imagenesActualesPreview[0] || "");
     formData.append("imagenesActuales", JSON.stringify(imagenesActualesPreview));
 
     imagenesSeleccionadas.forEach(imagen => {
       formData.append("imagenes", imagen);
     });
-
-    console.log("FORMDATA PRODUCTO:");
-    for (let [key, value] of formData.entries()) {
-      console.log(key, value);
-    }
 
     const url = productoEditandoId
       ? `${API_URL}/productos/${productoEditandoId}`
@@ -1191,13 +1279,13 @@ if (formProducto) {
       cerrarModalProductoAdmin();
 
       alert("Producto guardado correctamente");
+
     } catch (error) {
       console.error(error);
       alert("No se pudo guardar el producto");
     }
   });
 }
-
 /* MOSTRAR PRODUCTOS ADMIN */
 
 async function cargarProductosAdmin() {
@@ -1369,22 +1457,18 @@ async function editarProducto(id) {
     productoEditandoId = id;
 
     // =========================
-    // Imágenes actuales
+    // Imágenes actuales para mover/eliminar
     // =========================
-    imagenActualProducto = producto.imagen || "";
-    imagenesActualesProducto = producto.imagenes || "[]";
-
-    try {
-      imagenesActualesPreview = producto.imagenes
-        ? JSON.parse(producto.imagenes)
-        : producto.imagen
-          ? [producto.imagen]
-          : [];
-    } catch (error) {
-      imagenesActualesPreview = producto.imagen ? [producto.imagen] : [];
-    }
+    imagenesPreviewProducto = obtenerImagenesProducto(producto).map(ruta => {
+      return {
+        tipo: "actual",
+        valor: ruta
+      };
+    });
 
     imagenesSeleccionadas = [];
+
+    sincronizarImagenesDesdePreview();
 
     // =========================
     // Cargar categorías
@@ -1852,8 +1936,16 @@ function filtrarCatalogoCategoria(categoriaId, boton) {
 function aplicarFiltrosCatalogo() {
   let productos = [...productosCatalogoData];
 
+  const textoBusqueda = document.getElementById("buscarCatalogo")?.value.toLowerCase().trim() || "";
+
   if (categoriaActivaCatalogo !== "todos") {
     productos = productos.filter(producto => producto.categoria_id == categoriaActivaCatalogo);
+  }
+
+  if (textoBusqueda) {
+    productos = productos.filter(producto =>
+      producto.nombre?.toLowerCase().includes(textoBusqueda)
+    );
   }
 
   const min = Number(document.getElementById("precioMin")?.value || 0);
@@ -1883,20 +1975,10 @@ function aplicarFiltrosCatalogo() {
 
   pintarCatalogo(productos);
 }
-
 document.getElementById("filtrarPrecio")?.addEventListener("click", aplicarFiltrosCatalogo);
 document.getElementById("ordenCatalogo")?.addEventListener("change", aplicarFiltrosCatalogo);
+document.getElementById("buscarCatalogo")?.addEventListener("input", aplicarFiltrosCatalogo);
 
-document.getElementById("buscarCatalogo")?.addEventListener("input", e => {
-  const texto = e.target.value.toLowerCase();
-
-  const productos = productosCatalogoData.filter(producto =>
-    producto.nombre.toLowerCase().includes(texto) ||
-    producto.descripcion?.toLowerCase().includes(texto)
-  );
-
-  pintarCatalogo(productos);
-});
 
 cargarCatalogo();
 
@@ -2888,3 +2970,26 @@ document.querySelectorAll("[data-metodo-pago]").forEach(btn => {
     }
   });
 });
+
+function sincronizarImagenesDesdePreview() {
+  imagenesActualesPreview = imagenesPreviewProducto
+    .filter(imagen => imagen.tipo === "actual")
+    .map(imagen => imagen.valor);
+
+  imagenesSeleccionadas = imagenesPreviewProducto
+    .filter(imagen => imagen.tipo === "nueva")
+    .map(imagen => imagen.valor);
+
+  imagenActualProducto = imagenesPreviewProducto[0]
+    ? imagenesPreviewProducto[0].valor
+    : "";
+
+  imagenesActualesProducto = JSON.stringify(imagenesActualesPreview);
+}
+
+function eliminarImagenPreviewProducto(index) {
+  imagenesPreviewProducto.splice(index, 1);
+
+  sincronizarImagenesDesdePreview();
+  mostrarPreviewImagenes();
+}
