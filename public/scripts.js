@@ -6,8 +6,6 @@ const API_URL =
 
 let monedaActual = localStorage.getItem("monedaActual") || "COP";
 let tasaCambio = 1;
-let imagenesPreviewProducto = [];
-let imagenArrastrandoIndex = null;
 
 function formatearPrecio(precio) {
   // Asegúrate de que el precio sea un número válido
@@ -570,6 +568,7 @@ if (cerrarModalProducto) {
 if (cancelarProducto) {
   cancelarProducto.addEventListener("click", cerrarModalProductoAdmin);
 }
+
 function cerrarModalProductoAdmin() {
   if (!modalProducto || !formProducto) return;
 
@@ -577,23 +576,17 @@ function cerrarModalProductoAdmin() {
   formProducto.reset();
 
   productoEditandoId = null;
-
   imagenActualProducto = "";
   imagenesActualesProducto = "[]";
   imagenesActualesPreview = [];
-  imagenesSeleccionadas = [];
-  imagenesPreviewProducto = [];
 
   tallasProducto = [];
   coloresProducto = [];
-  variantesProducto = [];
-
+  imagenesSeleccionadas = [];
   usaTallasProducto = true;
   usaColoresProducto = true;
   tipoTallaProducto = "";
   tipoProducto = "normal";
-
-  if (stockProducto) stockProducto.value = "";
 
   if (bloqueTallasProducto) bloqueTallasProducto.style.display = "block";
   if (bloqueColoresProducto) bloqueColoresProducto.style.display = "block";
@@ -610,7 +603,6 @@ function cerrarModalProductoAdmin() {
 
   mostrarTallasSeleccionadas();
   mostrarColoresSeleccionados();
-  mostrarVariantesProducto();
   mostrarPreviewImagenes();
 }
 
@@ -859,29 +851,18 @@ function mostrarPreviewImagenes() {
 
   previewGaleria.innerHTML = "";
 
+  const totalImagenes = imagenesActualesPreview.length + imagenesSeleccionadas.length;
+
   if (contadorImagenes) {
-    contadorImagenes.textContent = `${imagenesPreviewProducto.length}/6 imágenes`;
+    contadorImagenes.textContent = `${totalImagenes}/6 imágenes`;
   }
 
-  imagenesPreviewProducto.forEach((imagen, index) => {
+  // Imágenes que ya estaban guardadas cuando editas producto
+  imagenesActualesPreview.forEach((imagen, index) => {
     const item = document.createElement("div");
     item.classList.add("preview-item");
-    item.setAttribute("draggable", "true");
-    item.dataset.index = index;
 
-    if (imagen.tipo === "actual") {
-      item.style.backgroundImage = `url('${obtenerUrlImagen(imagen.valor)}')`;
-    }
-
-    if (imagen.tipo === "nueva") {
-      const reader = new FileReader();
-
-      reader.onload = e => {
-        item.style.backgroundImage = `url('${e.target.result}')`;
-      };
-
-      reader.readAsDataURL(imagen.valor);
-    }
+    item.style.backgroundImage = `url('${obtenerUrlImagen(imagen)}')`;
 
     item.innerHTML = `
       <span>${index + 1}</span>
@@ -889,88 +870,44 @@ function mostrarPreviewImagenes() {
       <button 
         type="button" 
         class="btn-eliminar-preview"
-        onclick="eliminarImagenPreviewProducto(${index})"
+        onclick="eliminarImagenActualProducto(${index})"
       >
         ×
       </button>
-
-      <div class="preview-mover-texto">
-        Arrastra para mover
-      </div>
     `;
-
-    item.addEventListener("dragstart", () => {
-      imagenArrastrandoIndex = index;
-      item.classList.add("arrastrando");
-    });
-
-    item.addEventListener("dragend", () => {
-      imagenArrastrandoIndex = null;
-      item.classList.remove("arrastrando");
-    });
-
-    item.addEventListener("dragover", e => {
-      e.preventDefault();
-      item.classList.add("sobre-preview");
-    });
-
-    item.addEventListener("dragleave", () => {
-      item.classList.remove("sobre-preview");
-    });
-
-    item.addEventListener("drop", e => {
-      e.preventDefault();
-      item.classList.remove("sobre-preview");
-
-      const indexDestino = Number(item.dataset.index);
-
-      if (
-        imagenArrastrandoIndex === null ||
-        imagenArrastrandoIndex === indexDestino
-      ) {
-        return;
-      }
-
-      const imagenMovida = imagenesPreviewProducto.splice(imagenArrastrandoIndex, 1)[0];
-      imagenesPreviewProducto.splice(indexDestino, 0, imagenMovida);
-
-      sincronizarImagenesDesdePreview();
-      mostrarPreviewImagenes();
-    });
 
     previewGaleria.appendChild(item);
   });
+
+  // Imágenes nuevas antes de subir
+  imagenesSeleccionadas.forEach((archivo, index) => {
+    const reader = new FileReader();
+
+    reader.onload = e => {
+      const item = document.createElement("div");
+      item.classList.add("preview-item");
+
+      item.style.backgroundImage = `url('${e.target.result}')`;
+
+      item.innerHTML = `
+        <span>${imagenesActualesPreview.length + index + 1}</span>
+
+        <button 
+          type="button" 
+          class="btn-eliminar-preview"
+          onclick="eliminarImagenNuevaProducto(${index})"
+        >
+          ×
+        </button>
+      `;
+
+      previewGaleria.appendChild(item);
+    };
+
+    reader.readAsDataURL(archivo);
+  });
 }
 
-imagenesProducto?.addEventListener("change", e => {
-  const archivos = Array.from(e.target.files);
-
-  const espacioDisponible = 6 - imagenesPreviewProducto.length;
-
-  if (espacioDisponible <= 0) {
-    alert("Solo puedes subir máximo 6 imágenes");
-    imagenesProducto.value = "";
-    return;
-  }
-
-  const archivosPermitidos = archivos.slice(0, espacioDisponible);
-
-  archivosPermitidos.forEach(archivo => {
-    imagenesPreviewProducto.push({
-      tipo: "nueva",
-      valor: archivo
-    });
-  });
-
-  if (archivos.length > espacioDisponible) {
-    alert(`Solo se agregaron ${espacioDisponible} imágenes. El máximo permitido es 6.`);
-  }
-
-  imagenesProducto.value = "";
-
-  sincronizarImagenesDesdePreview();
-  mostrarPreviewImagenes();
-});
 function eliminarImagenNuevaProducto(index) {
   imagenesSeleccionadas.splice(index, 1);
 
@@ -1190,9 +1127,6 @@ if (formProducto) {
   formProducto.addEventListener("submit", async e => {
     e.preventDefault();
 
-    // Actualiza los arreglos según el orden actual del preview
-    sincronizarImagenesDesdePreview();
-
     const precio = parseFloat(precioProducto.value);
 
     if (isNaN(precio) || precio <= 0) {
@@ -1200,22 +1134,7 @@ if (formProducto) {
       return;
     }
 
-    if (!nombreProducto.value.trim()) {
-      alert("Escribe el nombre del producto");
-      return;
-    }
-
-    if (!descripcionProducto.value.trim()) {
-      alert("Escribe la descripción del producto");
-      return;
-    }
-
-    if (!categoriaProducto.value) {
-      alert("Selecciona una categoría");
-      return;
-    }
-
-    if (imagenesPreviewProducto.length === 0) {
+    if (!productoEditandoId && imagenesSeleccionadas.length === 0) {
       alert("Selecciona mínimo una imagen");
       return;
     }
@@ -1238,15 +1157,17 @@ if (formProducto) {
     formData.append("marca", marcaProducto.value.trim());
     formData.append("variantes", JSON.stringify(variantesFinales));
     formData.append("tipo_producto", tipoProducto);
-
-    // Imágenes actuales que ya están guardadas en servidor
-    formData.append("imagenActual", imagenesActualesPreview[0] || "");
+    formData.append("imagenActual", imagenActualProducto || imagenesActualesPreview[0] || "");
     formData.append("imagenesActuales", JSON.stringify(imagenesActualesPreview));
 
-    // Imágenes nuevas seleccionadas
     imagenesSeleccionadas.forEach(imagen => {
       formData.append("imagenes", imagen);
     });
+
+    console.log("FORMDATA PRODUCTO:");
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value);
+    }
 
     const url = productoEditandoId
       ? `${API_URL}/productos/${productoEditandoId}`
@@ -1257,7 +1178,7 @@ if (formProducto) {
     try {
       const res = await fetch(url, {
         method,
-        body: formData
+        body: formData,
       });
 
       if (!res.ok) {
@@ -1270,13 +1191,13 @@ if (formProducto) {
       cerrarModalProductoAdmin();
 
       alert("Producto guardado correctamente");
-
     } catch (error) {
       console.error(error);
       alert("No se pudo guardar el producto");
     }
   });
 }
+
 /* MOSTRAR PRODUCTOS ADMIN */
 
 async function cargarProductosAdmin() {
@@ -1448,18 +1369,22 @@ async function editarProducto(id) {
     productoEditandoId = id;
 
     // =========================
-    // Imágenes actuales para mover/eliminar
+    // Imágenes actuales
     // =========================
-    imagenesPreviewProducto = obtenerImagenesProducto(producto).map(ruta => {
-      return {
-        tipo: "actual",
-        valor: ruta
-      };
-    });
+    imagenActualProducto = producto.imagen || "";
+    imagenesActualesProducto = producto.imagenes || "[]";
+
+    try {
+      imagenesActualesPreview = producto.imagenes
+        ? JSON.parse(producto.imagenes)
+        : producto.imagen
+          ? [producto.imagen]
+          : [];
+    } catch (error) {
+      imagenesActualesPreview = producto.imagen ? [producto.imagen] : [];
+    }
 
     imagenesSeleccionadas = [];
-
-    sincronizarImagenesDesdePreview();
 
     // =========================
     // Cargar categorías
@@ -2963,26 +2888,3 @@ document.querySelectorAll("[data-metodo-pago]").forEach(btn => {
     }
   });
 });
-
-function sincronizarImagenesDesdePreview() {
-  imagenesActualesPreview = imagenesPreviewProducto
-    .filter(imagen => imagen.tipo === "actual")
-    .map(imagen => imagen.valor);
-
-  imagenesSeleccionadas = imagenesPreviewProducto
-    .filter(imagen => imagen.tipo === "nueva")
-    .map(imagen => imagen.valor);
-
-  imagenActualProducto = imagenesPreviewProducto[0]
-    ? imagenesPreviewProducto[0].valor
-    : "";
-
-  imagenesActualesProducto = JSON.stringify(imagenesActualesPreview);
-}
-
-function eliminarImagenPreviewProducto(index) {
-  imagenesPreviewProducto.splice(index, 1);
-
-  sincronizarImagenesDesdePreview();
-  mostrarPreviewImagenes();
-}
