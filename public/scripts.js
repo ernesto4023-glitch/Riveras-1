@@ -787,66 +787,144 @@ function eliminarColorProducto(color) {
 /* IMÁGENES */
 
 if (imagenesProducto) {
-  imagenesProducto.addEventListener("change", () => {
-    imagenesSeleccionadas = Array.from(imagenesProducto.files).slice(0, 6);
-    mostrarPreviewImagenes();
-  });
+  imagenesProducto?.addEventListener("change", e => {
+  const archivos = Array.from(e.target.files);
+
+  const totalActual = imagenesActualesPreview.length + imagenesSeleccionadas.length;
+  const espacioDisponible = 6 - totalActual;
+
+  if (espacioDisponible <= 0) {
+    alert("Solo puedes subir máximo 6 imágenes");
+    imagenesProducto.value = "";
+    return;
+  }
+
+  const archivosPermitidos = archivos.slice(0, espacioDisponible);
+
+  imagenesSeleccionadas = [
+    ...imagenesSeleccionadas,
+    ...archivosPermitidos
+  ];
+
+  if (archivos.length > espacioDisponible) {
+    alert(`Solo se agregaron ${espacioDisponible} imágenes. El máximo permitido es 6.`);
+  }
+
+  imagenesProducto.value = "";
+
+  mostrarPreviewImagenes();
+});
+}
+
+function obtenerUrlImagen(ruta) {
+  if (!ruta) return "img/no-image.png";
+
+  if (ruta.startsWith("http://") || ruta.startsWith("https://")) {
+    return ruta;
+  }
+
+  return `${API_URL}/${ruta.replace(/^\/+/, "")}`;
+}
+
+function obtenerImagenesProducto(producto) {
+  let imagenes = [];
+
+  try {
+    imagenes = producto.imagenes ? JSON.parse(producto.imagenes) : [];
+  } catch (error) {
+    imagenes = [];
+  }
+
+  if (!Array.isArray(imagenes)) {
+    imagenes = [];
+  }
+
+  if (producto.imagen && !imagenes.includes(producto.imagen)) {
+    imagenes.unshift(producto.imagen);
+  }
+
+  return [...new Set(imagenes)].filter(Boolean);
 }
 
 function mostrarPreviewImagenes() {
-  if (!previewGaleria || !contadorImagenes) return;
+  if (!previewGaleria) return;
 
-  const imagenesPreview = [
-    ...imagenesActualesPreview,
-    ...imagenesSeleccionadas
-  ];
-
-  contadorImagenes.textContent = `${imagenesPreview.length}/6 imágenes`;
   previewGaleria.innerHTML = "";
 
-  imagenesPreview.forEach((imagen, index) => {
+  const totalImagenes = imagenesActualesPreview.length + imagenesSeleccionadas.length;
+
+  if (contadorImagenes) {
+    contadorImagenes.textContent = `${totalImagenes}/6 imágenes`;
+  }
+
+  // Imágenes que ya estaban guardadas cuando editas producto
+  imagenesActualesPreview.forEach((imagen, index) => {
     const item = document.createElement("div");
-
     item.classList.add("preview-item");
-    item.draggable = true;
-    item.dataset.index = index;
 
-    if (typeof imagen === "string") {
-      item.style.backgroundImage = `url(${API_URL}/${imagen})`;
-    } else {
-      item.style.backgroundImage = `url(${URL.createObjectURL(imagen)})`;
-    }
+    item.style.backgroundImage = `url('${obtenerUrlImagen(imagen)}')`;
 
-    item.innerHTML = `<span>${index + 1}</span>`;
+    item.innerHTML = `
+      <span>${index + 1}</span>
 
-    item.addEventListener("dragstart", e => {
-      e.dataTransfer.setData("index", index);
-    });
-
-    item.addEventListener("dragover", e => {
-      e.preventDefault();
-    });
-
-    item.addEventListener("drop", e => {
-      e.preventDefault();
-
-      const indexOrigen = Number(e.dataTransfer.getData("index"));
-      const indexDestino = Number(item.dataset.index);
-
-      const imagenMovida = imagenesPreview.splice(indexOrigen, 1)[0];
-      imagenesPreview.splice(indexDestino, 0, imagenMovida);
-
-      imagenesActualesPreview = imagenesPreview.filter(img => typeof img === "string");
-      imagenesSeleccionadas = imagenesPreview.filter(img => typeof img !== "string");
-
-      imagenesActualesProducto = JSON.stringify(imagenesActualesPreview);
-      imagenActualProducto = imagenesActualesPreview[0] || "";
-
-      mostrarPreviewImagenes();
-    });
+      <button 
+        type="button" 
+        class="btn-eliminar-preview"
+        onclick="eliminarImagenActualProducto(${index})"
+      >
+        ×
+      </button>
+    `;
 
     previewGaleria.appendChild(item);
   });
+
+  // Imágenes nuevas antes de subir
+  imagenesSeleccionadas.forEach((archivo, index) => {
+    const reader = new FileReader();
+
+    reader.onload = e => {
+      const item = document.createElement("div");
+      item.classList.add("preview-item");
+
+      item.style.backgroundImage = `url('${e.target.result}')`;
+
+      item.innerHTML = `
+        <span>${imagenesActualesPreview.length + index + 1}</span>
+
+        <button 
+          type="button" 
+          class="btn-eliminar-preview"
+          onclick="eliminarImagenNuevaProducto(${index})"
+        >
+          ×
+        </button>
+      `;
+
+      previewGaleria.appendChild(item);
+    };
+
+    reader.readAsDataURL(archivo);
+  });
+}
+
+function eliminarImagenNuevaProducto(index) {
+  imagenesSeleccionadas.splice(index, 1);
+
+  if (imagenesProducto) {
+    imagenesProducto.value = "";
+  }
+
+  mostrarPreviewImagenes();
+}
+
+function eliminarImagenActualProducto(index) {
+  imagenesActualesPreview.splice(index, 1);
+
+  imagenActualProducto = imagenesActualesPreview[0] || "";
+  imagenesActualesProducto = JSON.stringify(imagenesActualesPreview);
+
+  mostrarPreviewImagenes();
 }
 
 /* CATEGORÍAS EN SELECT */
@@ -1908,11 +1986,17 @@ async function agregarProductoListadoAlCarrito(id) {
     const variantesDisponibles = variantes.filter(variante => Number(variante.stock) > 0);
 
     // Si tiene variantes, debe ir al detalle para escoger color y talla
-    if (variantesDisponibles.length > 0) {
-      window.location.href = `producto.html?id=${producto.id}`;
-      return;
-    }
+   const tieneOpciones = variantesDisponibles.some(variante => {
+    const tieneColores = Array.isArray(variante.colores) && variante.colores.length > 0;
+    const tieneTallas = Array.isArray(variante.tallas) && variante.tallas.length > 0;
 
+    return tieneColores || tieneTallas;
+  });
+
+  if (tieneOpciones) {
+    window.location.href = `producto.html?id=${producto.id}`;
+    return;
+  }
     // Si no tiene variantes, sí se puede agregar directo
     carritoProductos.push({
       id: Date.now(),
@@ -1947,12 +2031,15 @@ function agregarProductoDetalleAlCarrito() {
     return;
   }
 
-  if (variantesDetalle.length > 0 && !colorSeleccionadoDetalle) {
+  const requiereColor = productoTieneColoresDetalle();
+  const requiereTalla = productoTieneTallasDetalle();
+
+  if (requiereColor && !colorSeleccionadoDetalle) {
     alert("Selecciona un color");
     return;
   }
 
-  if (variantesDetalle.length > 0 && !tallaSeleccionadaDetalle) {
+  if (requiereTalla && !tallaSeleccionadaDetalle) {
     alert("Selecciona una talla");
     return;
   }
@@ -1969,6 +2056,18 @@ function agregarProductoDetalleAlCarrito() {
 
   guardarCarrito();
   pintarCarritoModal();
+}
+
+function productoTieneColoresDetalle() {
+  return variantesDetalle.some(variante => {
+    return Array.isArray(variante.colores) && variante.colores.length > 0;
+  });
+}
+
+function productoTieneTallasDetalle() {
+  return variantesDetalle.some(variante => {
+    return Array.isArray(variante.tallas) && variante.tallas.length > 0;
+  });
 }
 
 function pintarCarritoModal() {
@@ -2327,6 +2426,50 @@ cerrarCheckout?.addEventListener("click", () => {
   modalCheckout?.classList.remove("activo");
 });
 
+async function eliminarPedido(id) {
+  const confirmar = await Swal.fire({
+    title: "¿Eliminar pedido?",
+    text: `Esta acción eliminará el pedido #${id}. No se puede deshacer.`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Sí, eliminar",
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#e0be32",
+    cancelButtonColor: "#333"
+  });
+
+  if (!confirmar.isConfirmed) return;
+
+  try {
+    const res = await fetch(`${API_URL}/pedidos/${id}`, {
+      method: "DELETE"
+    });
+
+    if (!res.ok) {
+      throw new Error("Error al eliminar pedido");
+    }
+
+    await cargarPedidosAdmin();
+
+    Swal.fire({
+      title: "Pedido eliminado",
+      text: "El pedido fue eliminado correctamente.",
+      icon: "success",
+      confirmButtonColor: "#e0be32"
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    Swal.fire({
+      title: "Error",
+      text: "No se pudo eliminar el pedido.",
+      icon: "error",
+      confirmButtonColor: "#e0be32"
+    });
+  }
+}
+
 /* =========================
    MÉTODO DE PAGO
 ========================= */
@@ -2585,6 +2728,12 @@ if (contadorPendientes) {
 
                   <button onclick='verDetallePedido(${JSON.stringify(pedido.productos)})'>
                     <i class="bi bi-eye"></i>
+                  </button>
+
+                  <button 
+                    class="btn-eliminar-admin"
+                    onclick="eliminarPedido(${pedido.id})">
+                    <i class="bi bi-trash"></i>
                   </button>
                 </div>
               </td>

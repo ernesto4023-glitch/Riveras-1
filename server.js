@@ -645,6 +645,29 @@ app.put("/pedidos/:id/estado", async (req, res) => {
     res.status(500).json(error);
   }
 });
+
+app.delete("/pedidos/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await db.query(
+      "DELETE FROM pedidos WHERE id = ?",
+      [id]
+    );
+
+    res.json({
+      message: "Pedido eliminado correctamente"
+    });
+
+  } catch (error) {
+    console.error("Error al eliminar pedido:", error);
+
+    res.status(500).json({
+      message: "No se pudo eliminar el pedido",
+      error: error.message
+    });
+  }
+});
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
