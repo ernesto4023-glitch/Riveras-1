@@ -1816,6 +1816,13 @@ cargarDetalleProducto();
 /* =========================
    CATALOGO
 ========================= */
+const buscadorIndex = document.querySelector(".catalogo-search");
+
+if (buscadorIndex && document.getElementById("productosIndex")) {
+  buscadorIndex.addEventListener("click", () => {
+    window.location.href = "catalogo.html";
+  });
+}
 
 let productosCatalogoData = [];
 let categoriaActivaCatalogo = "todos";
