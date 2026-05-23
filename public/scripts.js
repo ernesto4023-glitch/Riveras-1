@@ -227,7 +227,7 @@ async function cargarFlyersIndex() {
     new Swiper(".header-swiper", {
       loop: flyers.length > 1,
       autoplay: {
-        delay: 3500,
+        delay: 8000,
         disableOnInteraction: false,
       },
       pagination: {
