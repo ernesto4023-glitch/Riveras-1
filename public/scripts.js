@@ -1171,17 +1171,6 @@ async function cargarProductosAdmin() {
 
               <td>0</td>
 
-              <td>
-  <span 
-    class="estado-pedido ${normalizarEstadoPedido(pedido.estado) === "Entregado" ? "entregado" : "clickeable"}"
-    ${normalizarEstadoPedido(pedido.estado) === "Entregado"
-      ? ""
-      : `onclick="cambiarEstadoPedido(${pedido.id}, '${normalizarEstadoPedido(pedido.estado)}')"`} 
-  >
-    ${normalizarEstadoPedido(pedido.estado)}
-  </span>
-</td>
-
               <td>${new Date().toLocaleDateString()}</td>
 
               <td>
@@ -2578,8 +2567,16 @@ if (contadorPendientes) {
                 ` : "Sin comprobante"}
               </td>
 
-              <td>${new Date(pedido.created_at).toLocaleDateString()}</td>
-
+              <td>
+                <span 
+                  class="estado-pedido ${normalizarEstadoPedido(pedido.estado) === "Entregado" ? "entregado" : "clickeable"}"
+                  ${normalizarEstadoPedido(pedido.estado) === "Entregado"
+                    ? ""
+                    : `onclick="cambiarEstadoPedido(${pedido.id}, '${normalizarEstadoPedido(pedido.estado)}')"`} 
+                >
+                  ${normalizarEstadoPedido(pedido.estado)}
+                </span>
+              </td>
               <td>
                 <div class="admin-actions">
                   <button onclick="verificarPedido(${pedido.id}, '${pedido.whatsapp}', '${pedido.nombre}')">
