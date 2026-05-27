@@ -1131,7 +1131,7 @@ function eliminarVarianteProducto(index) {
 
 if (agregarVarianteProducto) {
   agregarVarianteProducto.addEventListener("click", () => {
-    const stock = parseInt(stockProducto.value) || 0;
+    const stock = Number(stockProducto?.value?.trim());
 
     if (usaTallasProducto && tallasProducto.length === 0) {
       alert("Selecciona mínimo una talla para esta variante");
@@ -1143,7 +1143,7 @@ if (agregarVarianteProducto) {
       return;
     }
 
-    if (stock <= 0) {
+    if (isNaN(stock) || stock < 1) {
       alert("Escribe una cantidad válida para esta variante");
       return;
     }
@@ -2722,13 +2722,13 @@ const mensaje = `
 🛍️ Productos:
 ${productosTexto}
 
-💰 Total: $${totalPedido} ${"USD"}
+💰 Total: $${totalPedido} ${"COP"}
 
 📝 Notas:
 ${notas || "Sin notas"}
 `;
 
-const numeroNegocio = "19095447605";
+const numeroNegocio = "573223349682";
 
 const urlWhatsapp = `https://wa.me/${numeroNegocio}?text=${encodeURIComponent(mensaje)}`;
 
