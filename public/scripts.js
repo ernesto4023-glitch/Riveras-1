@@ -2697,7 +2697,44 @@ formCheckout?.addEventListener("submit", async e => {
       throw new Error("Error al crear pedido");
     }
 
-    alert("Pedido enviado correctamente. Revisaremos tu pago y te contactaremos por WhatsApp.");
+    /* =========================
+   MENSAJE WHATSAPP
+========================= */
+
+const productosTexto = carritoProductos.map(producto => {
+  return `• ${producto.nombre}
+Cantidad: ${producto.cantidad}
+Precio: $${producto.precio}`;
+}).join("\n\n");
+
+const mensaje = `
+🛒 NUEVO PEDIDO
+
+👤 Cliente: ${nombre}
+📱 WhatsApp: ${whatsapp}
+📧 Correo: ${correo || "No proporcionado"}
+
+📍 Dirección: ${direccion}
+🏙️ Ciudad: ${ciudad}
+
+💳 Método de pago: ${metodoPago}
+
+🛍️ Productos:
+${productosTexto}
+
+💰 Total: $${totalPedido} ${"USD"}
+
+📝 Notas:
+${notas || "Sin notas"}
+`;
+
+const numeroNegocio = "19095447605";
+
+const urlWhatsapp = `https://wa.me/${numeroNegocio}?text=${encodeURIComponent(mensaje)}`;
+
+window.open(urlWhatsapp, "_blank");
+
+alert("Pedido enviado correctamente");
 
     carritoProductos = [];
     guardarCarrito();
