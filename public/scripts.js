@@ -3037,3 +3037,179 @@ function eliminarImagenPreviewProducto(index) {
   sincronizarImagenesDesdePreview();
   mostrarPreviewImagenes();
 }
+
+/* =========================
+   ADMIN: DASHBOARD
+========================= */
+
+const metricVentasTotales = document.getElementById("metricVentasTotales");
+const metricVentasInfo = document.getElementById("metricVentasInfo");
+const metricPedidos = document.getElementById("metricPedidos");
+const metricClientes = document.getElementById("metricClientes");
+const metricProductos = document.getElementById("metricProductos");
+
+const graficoBarrasDashboard = document.getElementById("graficoBarrasDashboard");
+const graficoPastelDashboard = document.getElementById("graficoPastelDashboard");
+const botonesPeriodoDashboard = document.querySelectorAll("[data-periodo-dashboard]");
+
+let instanciaGraficoBarrasDashboard = null;
+let instanciaGraficoPastelDashboard = null;
+
+function formatearCOPDashboard(valor) {
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    maximumFractionDigits: 0
+  }).format(Number(valor || 0));
+}
+
+function nombrePlanGrafica(plan) {
+  if (plan === "diario") return "Plan diario";
+  if (plan === "semanal") return "Plan semanal";
+  if (plan === "mensual") return "Plan mensual";
+  return plan || "Sin plan";
+}
+
+async function cargarDashboardMetricas() {
+  if (!metricVentasTotales && !metricPedidos && !metricClientes && !metricProductos) return;
+
+  try {
+    const res = await fetch(`${API_URL}/dashboard-metricas`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error("Error dashboard métricas:", data);
+      return;
+    }
+
+    if (metricVentasTotales) {
+      metricVentasTotales.textContent = formatearCOPDashboard(data.ventas_totales);
+    }
+
+    if (metricPedidos) {
+      metricPedidos.textContent = data.pedidos;
+    }
+
+    if (metricClientes) {
+      metricClientes.textContent = data.clientes;
+    }
+
+    if (metricProductos) {
+      metricProductos.textContent = data.productos;
+    }
+
+    if (metricVentasInfo) {
+      metricVentasInfo.textContent = data.columna_total_usada
+        ? `Calculado desde pedidos.${data.columna_total_usada}`
+        : "Sin columna total en pedidos";
+    }
+
+  } catch (error) {
+    console.error("Error al cargar métricas:", error);
+  }
+}
+
+async function cargarGraficasDashboard(periodo = "dia") {
+  if (!graficoBarrasDashboard || !graficoPastelDashboard) return;
+
+  if (typeof Chart === "undefined") {
+    console.error("Chart.js no está cargado");
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/dashboard-graficas?periodo=${periodo}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      console.error("Error dashboard gráficas:", data);
+      return;
+    }
+
+    if (instanciaGraficoBarrasDashboard) {
+      instanciaGraficoBarrasDashboard.destroy();
+    }
+
+    if (instanciaGraficoPastelDashboard) {
+      instanciaGraficoPastelDashboard.destroy();
+    }
+
+    instanciaGraficoBarrasDashboard = new Chart(graficoBarrasDashboard, {
+      type: "bar",
+      data: {
+        labels: data.barras.labels,
+        datasets: [
+          {
+            label: "Asistencias",
+            data: data.barras.valores,
+            backgroundColor: "rgba(255, 90, 0, 0.75)",
+            borderColor: "rgba(255, 90, 0, 1)",
+            borderWidth: 1,
+            borderRadius: 10
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0
+            }
+          }
+        }
+      }
+    });
+
+    instanciaGraficoPastelDashboard = new Chart(graficoPastelDashboard, {
+      type: "doughnut",
+      data: {
+        labels: data.pastel.labels.map(nombrePlanGrafica),
+        datasets: [
+          {
+            data: data.pastel.valores,
+            backgroundColor: [
+              "rgba(255, 90, 0, 0.88)",
+              "rgba(255, 145, 0, 0.88)",
+              "rgba(40, 40, 40, 0.88)",
+              "rgba(120, 120, 120, 0.88)"
+            ],
+            borderWidth: 0
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "62%",
+        plugins: {
+          legend: {
+            position: "bottom"
+          }
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Error al cargar gráficas dashboard:", error);
+  }
+}
+
+botonesPeriodoDashboard.forEach(boton => {
+  boton.addEventListener("click", () => {
+    botonesPeriodoDashboard.forEach(btn => btn.classList.remove("active"));
+    boton.classList.add("active");
+
+    cargarGraficasDashboard(boton.dataset.periodoDashboard);
+  });
+});
+
+cargarDashboardMetricas();
+cargarGraficasDashboard("dia");

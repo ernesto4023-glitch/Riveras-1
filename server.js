@@ -668,6 +668,148 @@ app.delete("/pedidos/:id", async (req, res) => {
     });
   }
 });
+
+/* =========================
+   DASHBOARD MÉTRICAS
+========================= */
+
+app.get("/dashboard-metricas", async (req, res) => {
+  try {
+    const [[clientes]] = await db.query(`
+      SELECT COUNT(*) AS total 
+      FROM clientes
+    `);
+
+    const [[productos]] = await db.query(`
+      SELECT COUNT(*) AS total 
+      FROM productos
+    `);
+
+    const [[pedidos]] = await db.query(`
+      SELECT COUNT(*) AS total 
+      FROM pedidos
+    `);
+
+    let ventasTotales = 0;
+    let columnaTotalUsada = null;
+
+    const [columnasPedidos] = await db.query(`
+      SHOW COLUMNS FROM pedidos
+    `);
+
+    const columnas = columnasPedidos.map(columna => columna.Field);
+
+    const posiblesColumnasTotal = [
+      "total",
+      "total_pedido",
+      "valor_total",
+      "monto_total",
+      "precio_total"
+    ];
+
+    columnaTotalUsada = posiblesColumnasTotal.find(columna => columnas.includes(columna));
+
+    if (columnaTotalUsada) {
+      const [[ventas]] = await db.query(`
+        SELECT COALESCE(SUM(${columnaTotalUsada}), 0) AS total 
+        FROM pedidos
+      `);
+
+      ventasTotales = Number(ventas.total || 0);
+    }
+
+    res.json({
+      ventas_totales: ventasTotales,
+      pedidos: Number(pedidos.total || 0),
+      clientes: Number(clientes.total || 0),
+      productos: Number(productos.total || 0),
+      columna_total_usada: columnaTotalUsada
+    });
+
+  } catch (error) {
+    console.error("Error al cargar métricas del dashboard:", error);
+
+    res.status(500).json({
+      message: "Error al cargar métricas del dashboard",
+      sqlMessage: error.sqlMessage,
+      code: error.code
+    });
+  }
+});
+
+
+/* =========================
+   DASHBOARD GRÁFICAS
+========================= */
+
+app.get("/dashboard-graficas", async (req, res) => {
+  try {
+    const periodo = req.query.periodo || "dia";
+
+    let groupBy = "";
+    let label = "";
+    let whereFecha = "";
+
+    if (periodo === "dia") {
+      groupBy = "DATE(a.fecha)";
+      label = "DATE_FORMAT(a.fecha, '%d/%m')";
+      whereFecha = "a.fecha >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)";
+    } else if (periodo === "mes") {
+      groupBy = "DATE_FORMAT(a.fecha, '%Y-%m')";
+      label = "DATE_FORMAT(a.fecha, '%m/%Y')";
+      whereFecha = "a.fecha >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)";
+    } else if (periodo === "anio") {
+      groupBy = "YEAR(a.fecha)";
+      label = "YEAR(a.fecha)";
+      whereFecha = "a.fecha >= DATE_SUB(CURDATE(), INTERVAL 5 YEAR)";
+    } else {
+      return res.status(400).json({
+        message: "Periodo no válido"
+      });
+    }
+
+    const [barras] = await db.query(`
+      SELECT 
+        ${label} AS etiqueta,
+        COUNT(*) AS total
+      FROM asistencias a
+      WHERE ${whereFecha}
+      GROUP BY ${groupBy}
+      ORDER BY MIN(a.fecha) ASC
+    `);
+
+    const [pastel] = await db.query(`
+      SELECT 
+        c.plan AS etiqueta,
+        COUNT(*) AS total
+      FROM asistencias a
+      INNER JOIN clientes c ON c.id = a.cliente_id
+      WHERE ${whereFecha}
+      GROUP BY c.plan
+      ORDER BY total DESC
+    `);
+
+    res.json({
+      barras: {
+        labels: barras.map(item => item.etiqueta),
+        valores: barras.map(item => Number(item.total || 0))
+      },
+      pastel: {
+        labels: pastel.map(item => item.etiqueta),
+        valores: pastel.map(item => Number(item.total || 0))
+      }
+    });
+
+  } catch (error) {
+    console.error("Error al cargar gráficas:", error);
+
+    res.status(500).json({
+      message: "Error al cargar gráficas",
+      sqlMessage: error.sqlMessage,
+      code: error.code
+    });
+  }
+});
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

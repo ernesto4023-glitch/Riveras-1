@@ -93,45 +93,79 @@
     </div>
   </header>
 
-  <section class="admin-section active" id="dashboard">
-    <section class="dashboard-metrics">
-      <div class="metric-card">
-        <div class="metric-icon"><i class="bi bi-currency-dollar"></i></div>
-        <div>
-          <p>Ventas totales</p>
-          <h2>$0</h2>
-          <span>Panel en desarrollo</span>
-        </div>
-      </div>
+<section class="admin-section active" id="dashboard">
 
-      <div class="metric-card">
-        <div class="metric-icon"><i class="bi bi-bag"></i></div>
-        <div>
-          <p>Pedidos</p>
-          <h2>0</h2>
-          <span>Panel en desarrollo</span>
-        </div>
+  <section class="dashboard-metrics">
+    <div class="metric-card">
+      <div class="metric-icon"><i class="bi bi-currency-dollar"></i></div>
+      <div>
+        <p>Ventas totales</p>
+        <h2 id="metricVentasTotales">$0</h2>
+        <span id="metricVentasInfo">Calculando...</span>
       </div>
+    </div>
 
-      <div class="metric-card">
-        <div class="metric-icon"><i class="bi bi-people"></i></div>
-        <div>
-          <p>Clientes</p>
-          <h2>0</h2>
-          <span>Panel en desarrollo</span>
-        </div>
+    <div class="metric-card">
+      <div class="metric-icon"><i class="bi bi-bag"></i></div>
+      <div>
+        <p>Pedidos</p>
+        <h2 id="metricPedidos">0</h2>
+        <span>Pedidos registrados</span>
       </div>
+    </div>
 
-      <div class="metric-card">
-        <div class="metric-icon"><i class="bi bi-box-seam"></i></div>
-        <div>
-          <p>Productos</p>
-          <h2>0</h2>
-          <span>Administrable</span>
-        </div>
+    <div class="metric-card">
+      <div class="metric-icon"><i class="bi bi-people"></i></div>
+      <div>
+        <p>Clientes</p>
+        <h2 id="metricClientes">0</h2>
+        <span>Clientes registrados</span>
       </div>
-    </section>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-icon"><i class="bi bi-box-seam"></i></div>
+      <div>
+        <p>Productos</p>
+        <h2 id="metricProductos">0</h2>
+        <span>Productos publicados</span>
+      </div>
+    </div>
   </section>
+
+  <section class="dashboard-charts">
+
+    <div class="dashboard-chart-card">
+      <div class="dashboard-chart-header">
+        <div>
+          <h3>Asistencias</h3>
+          <p>Movimiento según el periodo seleccionado</p>
+        </div>
+
+        <div class="dashboard-chart-filtros">
+          <button type="button" class="active" data-periodo-dashboard="dia">Día</button>
+          <button type="button" data-periodo-dashboard="mes">Mes</button>
+          <button type="button" data-periodo-dashboard="anio">Año</button>
+        </div>
+      </div>
+
+      <canvas id="graficoBarrasDashboard"></canvas>
+    </div>
+
+    <div class="dashboard-chart-card">
+      <div class="dashboard-chart-header">
+        <div>
+          <h3>Planes</h3>
+          <p>Distribución de asistencias por plan</p>
+        </div>
+      </div>
+
+      <canvas id="graficoPastelDashboard"></canvas>
+    </div>
+
+  </section>
+
+</section>
 
   <section class="admin-section" id="flyers">
 
@@ -397,7 +431,7 @@
   </section>
 
 </main>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>

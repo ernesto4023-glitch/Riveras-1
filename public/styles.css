@@ -1719,6 +1719,71 @@ td {
   color: #000;
 }
 
+/* =========================
+   DASHBOARD GRÁFICAS
+========================= */
+
+.dashboard-charts {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr;
+  gap: 24px;
+  margin-top: 28px;
+}
+
+.dashboard-chart-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  min-height: 420px;
+}
+
+.dashboard-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.dashboard-chart-header h3 {
+  color: var(--text-main);
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.dashboard-chart-header p {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.dashboard-chart-filtros {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dashboard-chart-filtros button {
+  border: 1px solid var(--border-color);
+  background: var(--bg-main);
+  color: var(--text-main);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dashboard-chart-filtros button.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.dashboard-chart-card canvas {
+  width: 100% !important;
+  height: 320px !important;
+}
 
 /* =========================
    RESPONSIVE
@@ -2024,5 +2089,21 @@ td {
 
   .metodos-pago {
     grid-template-columns: 1fr;
+  }
+   .dashboard-charts {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-chart-header {
+    flex-direction: column;
+  }
+
+  .dashboard-chart-card {
+    padding: 18px;
+    min-height: 360px;
+  }
+
+  .dashboard-chart-card canvas {
+    height: 280px !important;
   }
 }
