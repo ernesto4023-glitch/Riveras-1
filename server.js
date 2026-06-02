@@ -670,14 +670,50 @@ app.delete("/pedidos/:id", async (req, res) => {
 });
 
 /* =========================
+   VISITAS PÁGINA
+========================= */
+
+app.post("/visitas", async (req, res) => {
+  try {
+    const { ruta } = req.body;
+
+    await db.query(
+      `
+      INSERT INTO visitas_pagina
+      (ruta, user_agent, ip)
+      VALUES (?, ?, ?)
+      `,
+      [
+        ruta || "/",
+        req.headers["user-agent"] || "",
+        req.ip || ""
+      ]
+    );
+
+    res.json({
+      message: "Visita registrada"
+    });
+
+  } catch (error) {
+    console.error("Error al registrar visita:", error);
+
+    res.status(500).json({
+      message: "Error al registrar visita",
+      sqlMessage: error.sqlMessage,
+      code: error.code
+    });
+  }
+});
+
+/* =========================
    DASHBOARD MÉTRICAS
 ========================= */
 
 app.get("/dashboard-metricas", async (req, res) => {
   try {
-    const [[clientes]] = await db.query(`
+    const [[visitas]] = await db.query(`
       SELECT COUNT(*) AS total 
-      FROM clientes
+      FROM visitas_pagina
     `);
 
     const [[productos]] = await db.query(`
@@ -690,40 +726,17 @@ app.get("/dashboard-metricas", async (req, res) => {
       FROM pedidos
     `);
 
-    let ventasTotales = 0;
-    let columnaTotalUsada = null;
-
-    const [columnasPedidos] = await db.query(`
-      SHOW COLUMNS FROM pedidos
+    const [[ventas]] = await db.query(`
+      SELECT COALESCE(SUM(total), 0) AS total 
+      FROM pedidos
     `);
 
-    const columnas = columnasPedidos.map(columna => columna.Field);
-
-    const posiblesColumnasTotal = [
-      "total",
-      "total_pedido",
-      "valor_total",
-      "monto_total",
-      "precio_total"
-    ];
-
-    columnaTotalUsada = posiblesColumnasTotal.find(columna => columnas.includes(columna));
-
-    if (columnaTotalUsada) {
-      const [[ventas]] = await db.query(`
-        SELECT COALESCE(SUM(${columnaTotalUsada}), 0) AS total 
-        FROM pedidos
-      `);
-
-      ventasTotales = Number(ventas.total || 0);
-    }
-
     res.json({
-      ventas_totales: ventasTotales,
+      ventas_totales: Number(ventas.total || 0),
       pedidos: Number(pedidos.total || 0),
-      clientes: Number(clientes.total || 0),
+      visitas: Number(visitas.total || 0),
       productos: Number(productos.total || 0),
-      columna_total_usada: columnaTotalUsada
+      columna_total_usada: "total"
     });
 
   } catch (error) {
@@ -737,7 +750,6 @@ app.get("/dashboard-metricas", async (req, res) => {
   }
 });
 
-
 /* =========================
    DASHBOARD GRÁFICAS
 ========================= */
@@ -748,20 +760,24 @@ app.get("/dashboard-graficas", async (req, res) => {
 
     let groupBy = "";
     let label = "";
-    let whereFecha = "";
+    let whereFechaVisitas = "";
+    let whereFechaPedidos = "";
 
     if (periodo === "dia") {
-      groupBy = "DATE(a.fecha)";
-      label = "DATE_FORMAT(a.fecha, '%d/%m')";
-      whereFecha = "a.fecha >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)";
+      groupBy = "DATE(v.created_at)";
+      label = "DATE_FORMAT(v.created_at, '%d/%m')";
+      whereFechaVisitas = "v.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)";
+      whereFechaPedidos = "created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)";
     } else if (periodo === "mes") {
-      groupBy = "DATE_FORMAT(a.fecha, '%Y-%m')";
-      label = "DATE_FORMAT(a.fecha, '%m/%Y')";
-      whereFecha = "a.fecha >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)";
+      groupBy = "DATE_FORMAT(v.created_at, '%Y-%m')";
+      label = "DATE_FORMAT(v.created_at, '%m/%Y')";
+      whereFechaVisitas = "v.created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)";
+      whereFechaPedidos = "created_at >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)";
     } else if (periodo === "anio") {
-      groupBy = "YEAR(a.fecha)";
-      label = "YEAR(a.fecha)";
-      whereFecha = "a.fecha >= DATE_SUB(CURDATE(), INTERVAL 5 YEAR)";
+      groupBy = "YEAR(v.created_at)";
+      label = "YEAR(v.created_at)";
+      whereFechaVisitas = "v.created_at >= DATE_SUB(CURDATE(), INTERVAL 5 YEAR)";
+      whereFechaPedidos = "created_at >= DATE_SUB(CURDATE(), INTERVAL 5 YEAR)";
     } else {
       return res.status(400).json({
         message: "Periodo no válido"
@@ -772,22 +788,47 @@ app.get("/dashboard-graficas", async (req, res) => {
       SELECT 
         ${label} AS etiqueta,
         COUNT(*) AS total
-      FROM asistencias a
-      WHERE ${whereFecha}
+      FROM visitas_pagina v
+      WHERE ${whereFechaVisitas}
       GROUP BY ${groupBy}
-      ORDER BY MIN(a.fecha) ASC
+      ORDER BY MIN(v.created_at) ASC
     `);
 
-    const [pastel] = await db.query(`
-      SELECT 
-        c.plan AS etiqueta,
-        COUNT(*) AS total
-      FROM asistencias a
-      INNER JOIN clientes c ON c.id = a.cliente_id
-      WHERE ${whereFecha}
-      GROUP BY c.plan
-      ORDER BY total DESC
+    const [pedidosRows] = await db.query(`
+      SELECT productos
+      FROM pedidos
+      WHERE ${whereFechaPedidos}
     `);
+
+    const categoriasConteo = {};
+
+    pedidosRows.forEach(pedido => {
+      try {
+        const productosPedido = JSON.parse(pedido.productos);
+
+        if (!Array.isArray(productosPedido)) return;
+
+        productosPedido.forEach(producto => {
+          const categoria =
+            producto.categoria ||
+            producto.categoria_nombre ||
+            producto.categoriaNombre ||
+            producto.nombre_categoria ||
+            producto.category ||
+            "Sin categoría";
+
+          categoriasConteo[categoria] = (categoriasConteo[categoria] || 0) + 1;
+        });
+
+      } catch (error) {
+        categoriasConteo["Sin categoría"] = (categoriasConteo["Sin categoría"] || 0) + 1;
+      }
+    });
+
+    const pastel = Object.entries(categoriasConteo).map(([etiqueta, total]) => ({
+      etiqueta,
+      total
+    }));
 
     res.json({
       barras: {
@@ -810,6 +851,8 @@ app.get("/dashboard-graficas", async (req, res) => {
     });
   }
 });
+
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {

@@ -3039,13 +3039,41 @@ function eliminarImagenPreviewProducto(index) {
 }
 
 /* =========================
+   REGISTRAR VISITA PÚBLICA
+========================= */
+
+async function registrarVisitaPagina() {
+  const esAdmin = window.location.pathname.includes("admin.html");
+  const esLogin = window.location.pathname.includes("login.html");
+
+  if (esAdmin || esLogin) return;
+
+  try {
+    await fetch(`${API_URL}/visitas`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        ruta: window.location.pathname
+      })
+    });
+
+  } catch (error) {
+    console.error("Error registrando visita:", error);
+  }
+}
+
+registrarVisitaPagina();
+
+/* =========================
    ADMIN: DASHBOARD
 ========================= */
 
 const metricVentasTotales = document.getElementById("metricVentasTotales");
 const metricVentasInfo = document.getElementById("metricVentasInfo");
 const metricPedidos = document.getElementById("metricPedidos");
-const metricClientes = document.getElementById("metricClientes");
+const metricVisitas = document.getElementById("metricVisitas");
 const metricProductos = document.getElementById("metricProductos");
 
 const graficoBarrasDashboard = document.getElementById("graficoBarrasDashboard");
@@ -3071,7 +3099,7 @@ function nombrePlanGrafica(plan) {
 }
 
 async function cargarDashboardMetricas() {
-  if (!metricVentasTotales && !metricPedidos && !metricClientes && !metricProductos) return;
+  if (!metricVentasTotales && !metricPedidos && !metricVisitas && !metricProductos) return;
 
   try {
     const res = await fetch(`${API_URL}/dashboard-metricas`);
@@ -3090,8 +3118,8 @@ async function cargarDashboardMetricas() {
       metricPedidos.textContent = data.pedidos;
     }
 
-    if (metricClientes) {
-      metricClientes.textContent = data.clientes;
+    if (metricVisitas) {
+      metricVisitas.textContent = data.visitas;
     }
 
     if (metricProductos) {
@@ -3140,7 +3168,7 @@ async function cargarGraficasDashboard(periodo = "dia") {
         labels: data.barras.labels,
         datasets: [
           {
-            label: "Asistencias",
+            label: "Visitas",
             data: data.barras.valores,
             backgroundColor: "rgba(255, 90, 0, 0.75)",
             borderColor: "rgba(255, 90, 0, 1)",
